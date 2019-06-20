@@ -1,1 +1,1 @@
-generating perm set
+generating permutation set
