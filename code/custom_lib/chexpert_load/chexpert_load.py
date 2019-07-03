@@ -73,7 +73,7 @@ pos_weights=torch.tensor(posw_list)
 class CheXpertDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, csv_file, root_dir, transform=None, labels_path=None, list_classes=None ):
+    def __init__(self, csv_file, root_dir, transform=None, labels_path=None, list_classes=None ,path=""):
 
         super().__init__()
         self.root_dir = root_dir
@@ -117,7 +117,10 @@ class CheXpertDataset(Dataset):
         return len(self.observations_frame)
 
     def __getitem__(self, idx):
-        img_name = os.path.join(self.observations_frame.iloc[idx, 0])
+        
+        #img_name = os.path.join(os.getcwd(),self.root_dir,self.observations_frame.iloc[idx, 0])
+        img_name = os.getcwd() + self.root_dir + self.observations_frame.iloc[idx, 0]
+
         image = imread(img_name)
         image = transforms.ToPILImage()(image)
             
@@ -151,10 +154,10 @@ class CheXpertDataset(Dataset):
             
         return feature_list
 
-def chexpert_load(csv_file_name, transformation, batch_size,labels_path=None,list_classes=None,shuffle=True):
+def chexpert_load(csv_file_name, transformation, batch_size,labels_path=None,list_classes=None,shuffle=True,root_dir=""):
     
     cheXpert_dataset = CheXpertDataset(csv_file=csv_file_name,
-                                       root_dir='not used', transform=transformation,labels_path=labels_path,list_classes=list_classes)
+                                       root_dir=root_dir, transform=transformation,labels_path=labels_path,list_classes=list_classes)
 
     dataloader = DataLoader(cheXpert_dataset, batch_size=batch_size, shuffle=shuffle)
 
