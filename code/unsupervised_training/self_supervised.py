@@ -28,6 +28,10 @@ import matplotlib.pyplot as plt
 import datetime
 import sys
 
+sys.path.insert(0, '/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load')
+sys.path.insert(0, '/home/aras/Desktop/SummerThesis/code/custom_lib/patch')
+sys.path.insert(0, '/home/aras/Desktop/SummerThesis/code/custom_lib/jigsaw')
+
 '''
 #for colab
 #Patch
@@ -55,42 +59,10 @@ else:
     device = torch.device('cpu')
 
 
-#HOW TO USE RES BLOCK AT THE END AS A Class there operations between features and classifier that causes dimension conflict
-#LOSS FUNC JUST A 8 WAY SOFTMAX
-
-#Trying out advanced 
-class JigSawHead(torch.nn.Module):
-    def __init__(self, D_in, D_out=8):
-        """
-        In the constructor we instantiate two nn.Linear modules and assign them as
-        member variables.
-        """
-        super(RelativePositionHead, self).__init__()
-        self.res_block1 = models.resnet.BasicBlock(D_in,512)
-        self.res_block2 = models.resnet.BasicBlock(512,512)
-        self.device = torch.device('cuda') if gpu else torch.device('cpu')
-        self.classifier = torch.nn.Linear(512,D_out).to(device=self.device)
-
-    def forward(self, x):
-        
-        #print(x.shape)
-        x = self.res_block1(x)
-        x = self.res_block2(x)
-        
-        _,N,_,_ = x.shape
-        # combining two representation (batch is [bs,ch,h,w ])
-        x = torch.stack([torch.cat((x[idx,:,:,:],x[idx+1,:,:,:]))
-                     for idx in range(0,N,2)], dim=0)
-        
-        #linear output with 8 outpts(directions)
-        y_pred = self.classifier(x)
-        return y_pred
-
 learning_rate=0.0001
 batch_size=16
 dtype = torch.float32
 resize=320
-num_classes=300
 
 method="relative_position"
 
@@ -100,6 +72,8 @@ split = 3.0
 #Params for jigsaw
 grid_crop_size=225
 patch_crop_size=64
+num_classes=300
+
 
 use_cuda = True
 if use_cuda and torch.cuda.is_available():
@@ -109,7 +83,7 @@ else:
     device = torch.device('cpu')
 
 file_name_p_set = F"permutation_set{num_classes}.pt"
-PATH_p_set = F"gdrive/My Drive/summerthesis/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
+PATH_p_set = F"/home/aras/Summerthesis/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
 
 #just ToTensor before pathch
 transform_train= transforms.Compose([          transforms.RandomCrop(320),transforms.ToTensor()])
@@ -120,8 +94,8 @@ transform_after_patching= transforms.Compose([ transforms.ToPILImage(),transform
                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])                                 
 
 
-labels_path="gdrive/My Drive/summerthesis/custom_lib/chexpert_load/labels.pt"
-cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("CheXpert-v1.0-small/train.csv",
+labels_path="/home/aras/Summerthesis/custom_lib/chexpert_load/labels.pt"
+cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("/home/aras/Desktop/CheXpert-v1.0-small/train.csv",
                                                                  transform_train,batch_size,labels_path)
 
 model = models.densenet121(num_classes = num_classes)
@@ -170,7 +144,7 @@ for epoch in range(num_epochs):
         
       if (i+1) % 50 == 0:                              # Logging
           print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
-#                  %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
+                  %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
 
 
 print('training done')
