@@ -59,6 +59,7 @@ else:
     device = torch.device('cpu')
 
 
+root_dir = '/../../../'
 learning_rate=0.0001
 batch_size=16
 dtype = torch.float32
@@ -83,7 +84,7 @@ else:
     device = torch.device('cpu')
 
 file_name_p_set = F"permutation_set{num_classes}.pt"
-PATH_p_set = F"/home/aras/Summerthesis/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
+PATH_p_set = F"/home/aras/Desktop/SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
 
 #just ToTensor before pathch
 transform_train= transforms.Compose([          transforms.RandomCrop(320),transforms.ToTensor()])
@@ -93,10 +94,9 @@ transform_after_patching= transforms.Compose([ transforms.ToPILImage(),transform
                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])                                 
 
-
-labels_path="/home/aras/Summerthesis/custom_lib/chexpert_load/labels.pt"
+labels_path="/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/labels.pt"
 cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("/home/aras/Desktop/CheXpert-v1.0-small/train.csv",
-                                                                 transform_train,batch_size,labels_path)
+                                                                 transform_train,batch_size,labels_path, root_dir = root_dir)
 
 model = models.densenet121(num_classes = num_classes)
 
