@@ -65,8 +65,9 @@ batch_size=16
 dtype = torch.float32
 resize=320
 
-method="relative_position"
 
+method="relative_position"
+show=False
 #Params for relative_position
 split = 3.0
 
@@ -122,9 +123,9 @@ for epoch in range(num_epochs):
       
       if method == "jigsaw":
         patcher = jigsaw.Jigsaw(images, PATH_p_set, grid_crop_size=grid_crop_size, patch_crop_size=patch_crop_size,
-                                       transform =transform_after_patching, gpu = use_cuda, show=False)  
+                                       transform =transform_after_patching, gpu = use_cuda, show=show)  
       elif method=="relative_position":
-        patcher = patch.Patch(images,split=split,transform=transform_after_patching,show=False)
+        patcher = patch.Patch(images,split=split,transform=transform_after_patching,show=show)
 
       patches, labels =  patcher()
       patches = patches.to(device=device, dtype=dtype)
