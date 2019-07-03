@@ -59,7 +59,7 @@ else:
     device = torch.device('cpu')
 
 
-root_dir = '/../../../'
+root_dir = '/../../'
 learning_rate=0.0001
 batch_size=16
 dtype = torch.float32
