@@ -59,7 +59,12 @@ else:
     device = torch.device('cpu')
 
 
+#print(os.getcwd())
 root_dir = '/../../'
+#root_dir = '/../'
+show=0
+
+
 learning_rate=0.0001
 batch_size=16
 dtype = torch.float32
@@ -67,7 +72,6 @@ resize=320
 
 
 method="jigsaw"
-show=True
 #Params for relative_position
 split = 3.0
 
@@ -80,7 +84,7 @@ file_name_p_set = F"permutation_set{num_classes}.pt"
 PATH_p_set = F"/home/aras/Desktop/SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
 
 #just ToTensor before pathch
-transform_train= transforms.Compose([          transforms.RandomCrop(320),transforms.ToTensor()])
+transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomVerticalFlip(), transforms.ToTensor()])
 
 #after patch transformation
 transform_after_patching= transforms.Compose([ transforms.ToPILImage(),transforms.ToTensor(),
@@ -109,7 +113,7 @@ currentDT = datetime.datetime.now()
 
 num_epochs=1
 print(F"{method}_num_classes{num_classes}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
-
+plot_loss=[]
 for epoch in range(num_epochs):
     for i,  (images, observations) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
       
@@ -132,7 +136,7 @@ for epoch in range(num_epochs):
       outputs = model(patches)              # Forward pass: compute the output class given a image
         
       loss = criterion(outputs, labels)           # Compute the loss: difference between the output class and the pre-given label
-
+      plot_loss.append(loss)
       optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
       loss.backward()                                   # Backward pass: compute the weight
       optimizer.step()                                  # Optimizer: update the weights of hidden nodes
@@ -141,6 +145,10 @@ for epoch in range(num_epochs):
       if (i+1) % 50 == 0:                              # Logging
           print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                   %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
+      
+      if i == 1000:
+        break
+    break 
 
 
 print('training done')
@@ -154,11 +162,11 @@ mins,sec=divmod(c.days * 86400 + c.seconds, 60)
 print(F"{method}_num_classes{num_classes}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
 print(mins,"mins ", sec,"secs")
 
-file_name = F"jigsaw_num_classes{num_classes}_epoch{epoch}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
-
-if not show:
-  PATH=F"/content/gdrive/My Drive/summerthesis/saved_model/{file_name}"
-
+if method == "jigsaw":
+  file_name = F"{method}_classes{num_classes}_epoch{epoch}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
+elif method == "relative_position":
+    file_name = F"{method}_epoch{epoch}_batch{batch_size}_split{split}.tar"
+ 
 
 PATH = F"/home/aras/Desktop/saved_models/{file_name}"
 
@@ -166,7 +174,16 @@ torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            }, PATH)
+            'loss':plot_loss}, PATH)
 
 #torch.save(model.state_dict(), PATH)
 print('saved  model(model,optim,loss, epoch)')# to google drive')
+
+'''
+fig=plt.figure()
+fig.suptitle("loss plot")
+plt.plot(plot_loss)
+plt.xlabel('iterations')
+plt.ylabel('loss')
+plt.show()
+'''
