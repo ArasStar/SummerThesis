@@ -119,7 +119,8 @@ class CheXpertDataset(Dataset):
     def __getitem__(self, idx):
         
         #img_name = os.path.join(os.getcwd(),self.root_dir,self.observations_frame.iloc[idx, 0])
-        img_name = os.getcwd() + self.root_dir + self.observations_frame.iloc[idx, 0]
+        img_name = os.getcwd() + self.root_dir + self.observations_frame.loc[idx, ['Path']].values[0]
+        #print("hoooop",img_name)
 
         image = imread(img_name)
         image = transforms.ToPILImage()(image)

@@ -78,7 +78,7 @@ split = 3.0
 grid_crop_size=225
 patch_crop_size=64
 num_classes=300
-num_epochs=1
+num_epochs=2
 
 
 file_name_p_set = F"permutation_set{num_classes}.pt"
