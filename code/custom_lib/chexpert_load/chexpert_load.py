@@ -105,9 +105,9 @@ class CheXpertDataset(Dataset):
                 np_arr = self.feature_string(row,u_one_features,u_zero_features)
                 tensor_arr = torch.from_numpy(np_arr).type(torch.FloatTensor).view(1,-1)
                 labels = torch.cat((labels,tensor_arr),dim=0)
-                
+            
             self.labels = labels
-        
+            torch.save(self.labels,"/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt")
         
        # df_labels = pd.DataFrame(labels.numpy(),columns=[cl+"_feat" for cl in self.list_classes])
        #self.observations_frame.join(df_labels)

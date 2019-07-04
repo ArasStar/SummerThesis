@@ -62,16 +62,15 @@ else:
 #print(os.getcwd())
 root_dir = '/../../'
 #root_dir = '/../'
+
 show=0
-
-
 learning_rate=0.0001
 batch_size=16
 dtype = torch.float32
 resize=320
 
 
-method="jigsaw"
+method="relative_position"
 #Params for relative_position
 split = 3.0
 
@@ -91,9 +90,9 @@ transform_after_patching= transforms.Compose([ transforms.ToPILImage(),transform
                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])                                 
 
-labels_path="/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/labels.pt"
-cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("/home/aras/Desktop/CheXpert-v1.0-small/train.csv",
-                                                                 transform_train,batch_size,labels_path, root_dir = root_dir)
+labels_path="/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt"
+cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("/home/aras/Desktop/CheXpert-v1.0-small/self_train.csv",
+                                                                 transform_train,batch_size, root_dir = root_dir)
 
 model = models.densenet121(num_classes = num_classes)
 
@@ -107,13 +106,18 @@ model=model.to(device=device)
 
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-criterion =torch.nn.CrossEntropyLoss().to(device = device)
+criterion = torch.nn.CrossEntropyLoss().to(device = device)
 
 currentDT = datetime.datetime.now()
 
 num_epochs=1
-print(F"{method}_num_classes{num_classes}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
-plot_loss=[]
+
+if method == "jigsaw":
+  print(F"{method}_num_classes{num_classes}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
+elif method == "relative_position":
+  print(F"{method}_epoch{num_epochs}_batch{batch_size}_split{split}_CUDA{use_cuda}")
+
+plot_loss = []
 for epoch in range(num_epochs):
     for i,  (images, observations) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
       
@@ -131,7 +135,7 @@ for epoch in range(num_epochs):
         break
         
       labels = labels.to(device=device, dtype=torch.long)
-        
+
       #break
       outputs = model(patches)              # Forward pass: compute the output class given a image
         
@@ -146,10 +150,6 @@ for epoch in range(num_epochs):
           print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                   %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
       
-      if i == 1000:
-        break
-    break 
-
 
 print('training done')
 
@@ -158,14 +158,16 @@ aftertDT = datetime.datetime.now()
 c=aftertDT-currentDT
 mins,sec=divmod(c.days * 86400 + c.seconds, 60)
 
-
-print(F"{method}_num_classes{num_classes}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
 print(mins,"mins ", sec,"secs")
 
 if method == "jigsaw":
+  print(F"{method}_num_classes{num_classes}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
   file_name = F"{method}_classes{num_classes}_epoch{epoch}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
+
 elif method == "relative_position":
     file_name = F"{method}_epoch{epoch}_batch{batch_size}_split{split}.tar"
+    print(F"{method}_epoch{num_epochs}_batch{batch_size}_split{split}_CUDA{use_cuda}")
+
  
 
 PATH = F"/home/aras/Desktop/saved_models/{file_name}"
