@@ -137,7 +137,7 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
         optimizer.step()                                  # Optimizer: update the weights of hidden nodes
         
 
-        if i%10 == 0:
+        if i%200 == 0:
                 plot_loss.append(loss)
                 
         if (i+1) % 50 == 0:                              # Logging
