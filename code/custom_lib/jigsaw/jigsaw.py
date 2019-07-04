@@ -6,13 +6,19 @@ import matplotlib.patches as patches4rectangle
 
 
 class Jigsaw(object):
-    def __init__(self, image_batch, path_permutation_set, grid_crop_size=255, patch_crop_size=75, gpu=True, show=False,transform= None):
+    def __init__(self, image_batch, path_permutation_set, grid_crop_size=255, patch_crop_size=64, gpu=True, show=False,transform= None):
 
         self.bs, _, self.h, self.w = image_batch.shape
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
+
         self.grid_crop_size = grid_crop_size
+        assert (self.grid_crop_size %3 == 0), "has grid crop size has to be divisable by 3"
+        self.grid_patch_size = int(self.grid_crop_size / 3)
         self.patch_crop_size = patch_crop_size
+        assert (self.grid_patch_size > self.patch_crop_size), "patch crop size has to be smaller then grid patch size"
+
+
 
         self.device = torch.device('cuda') if gpu else torch.device('cpu')
         self.permutation_set = torch.load(path_permutation_set, map_location=self.device)
@@ -29,7 +35,6 @@ class Jigsaw(object):
 
             if idx == 1 and self.show:
                 self.show_cropped_patches(image, shiftcol, shiftrow, permuted_patches, cord_patches, label)
-                self.show = False
             
             if self.transform:
                  permuted_patches = torch.stack([self.transform(x_i) 
@@ -53,7 +58,7 @@ class Jigsaw(object):
         _, h, _ = image.shape
         [shiftrow, shiftcol] = np.random.randint(h - cropsize - 1, size=2)
 
-        return image[:, shiftrow:shiftrow + cropsize, shiftcol:shiftcol + cropsize], shiftcol, shiftrow
+        return image[:, shiftrow:shiftrow + cropsize, shiftcol:shiftcol + cropsize], shiftcol , shiftrow
 
     def get_patches(self, grid):
 
@@ -62,17 +67,15 @@ class Jigsaw(object):
         #non_transformed_patches = torch.empty(9,self.patch_crop_size, self.patch_crop_size)
 
         cord_patches = []
-        grid_patch_size = int(self.grid_crop_size / 3)  # 85
-
         patch_n = 0
         for i in range(0, 3):
             for j in range(0, 3):
                 # each patch take random crop to prevent edge following
 
-                row_start = 0 + grid_patch_size * i;
-                row_finit = row_start + grid_patch_size
-                col_start = 0 + grid_patch_size * j;
-                col_finit = col_start + grid_patch_size
+                row_start = 0 + self.grid_patch_size * i;
+                row_finit = row_start + self.grid_patch_size
+                col_start = 0 + self.grid_patch_size * j;
+                col_finit = col_start + self.grid_patch_size
                 
                 patches[patch_n,:, :], scol, srow = self.random_crop(grid[:, row_start:row_finit, col_start:col_finit],
                                                                       self.patch_crop_size) 
@@ -93,9 +96,10 @@ class Jigsaw(object):
 
     def show_cropped_patches(self, image, shift_col, shift_row, permuted_patches, cord_patches, label):
         # Preparing
+
         image_draw = transforms.ToPILImage()(image)
         perm_set = self.permutation_set[label]
-
+        perm_label =(perm_set.cpu().numpy())
         # font = ImageFont.truetype("arial.ttf", fontsize)
         # Original Image plot
         fig, ax = plt.subplots(1, figsize=(5, 5))
@@ -103,19 +107,18 @@ class Jigsaw(object):
 
         start_col = shift_col
         start_row = shift_row
-
         for i in range(0, 4):
-            grid_patch_size = int(self.grid_crop_size / 3)
-            shift = i * grid_patch_size
-
-            ax.plot([start_col, start_col + grid_patch_size * 3], [start_row + shift, start_row + shift], color='r',
+            shift = i * self.grid_patch_size
+            ax.plot([start_col, start_col + self.grid_crop_size], [start_row + shift, start_row + shift], color='r',
                     linestyle='dashed')
-            ax.plot([start_col + shift, start_col + shift], [start_row, start_row + grid_patch_size * 3], color='r',
+            ax.plot([start_col + shift, start_col + shift], [start_row, start_row + self.grid_crop_size], color='r',
                     linestyle='dashed')
+        
+        fig.suptitle(F"grid size {self.grid_crop_size}, patch_size(green){self.patch_crop_size}")
 
-        # print(cord_patches)
+        # print(cord_patcstart_colstart_colhes)
         for idx, (srow, scol) in enumerate(cord_patches):
-            # print(idx)
+            # print(idx)label
             n = perm_set[idx]
 
             if n < 3:
@@ -127,16 +130,15 @@ class Jigsaw(object):
 
             j = n % 3
 
-            rect = patches4rectangle.Rectangle(
-                (shift_col + j * grid_patch_size + scol, shift_row + i * grid_patch_size + srow), 64, 64, linewidth=2,
-                edgecolor='g', facecolor='none')
+            rect = patches4rectangle.Rectangle((shift_col + j * self.grid_patch_size + scol, shift_row + i * self.grid_patch_size + srow),
+                                                                                self.patch_crop_size, self.patch_crop_size , linewidth=2,edgecolor='g', facecolor='none')
             ax.add_patch(rect)
 
         plt.imshow(image_draw, cmap='Greys_r')
 
         # Permuted Grid
-        fig, ax = plt.subplots(3, 3, sharex='col', sharey='row', figsize=(5, 5))
-        fig.subplots_adjust(hspace=0, wspace=0)
+        fig2, ax2 = plt.subplots(3, 3, sharex='col', sharey='row', figsize=(5, 5))
+        fig2.subplots_adjust(hspace=0, wspace=0)
 
         for idx in np.arange(9):
 
@@ -150,12 +152,14 @@ class Jigsaw(object):
             j = idx % 3
 
             patch_show = transforms.ToPILImage()(permuted_patches[idx,:, :])
-            ax[i, j].imshow(patch_show, cmap='Greys_r')
-            ax[i, j].axis('off')
+            ax2[i, j].imshow(patch_show, cmap='Greys_r')
+            ax2[i, j].axis('off')
+        
+        fig2.suptitle(str(perm_label))
 
         # Aligned Grid
-        fig, ax = plt.subplots(3, 3, sharex='col', sharey='row', figsize=(5, 5))
-        fig.subplots_adjust(hspace=0, wspace=0)
+        fig3, ax3 = plt.subplots(3, 3, sharex='col', sharey='row', figsize=(5, 5))
+        fig3.subplots_adjust(hspace=0, wspace=0)
 
         for index, idx in enumerate(perm_set):
 
@@ -171,9 +175,14 @@ class Jigsaw(object):
             j = idx % 3
 
             patch_show = transforms.ToPILImage()(permuted_patches[index, :, :])
-            ax[i, j].imshow(patch_show, cmap='Greys_r')
-            ax[i, j].axis('off')
-            
+            ax3[i, j].imshow(patch_show, cmap='Greys_r')
+            ax3[i, j].axis('off')
+
+        
+        fig3.suptitle(str(np.arange(9)))
+
+        plt.show()
+
             
 class Basic_JigsawHead(torch.nn.Module):
     def __init__(self, D_in, D_out, gpu=True):

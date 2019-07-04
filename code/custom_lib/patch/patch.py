@@ -2,11 +2,12 @@ import torch
 import numpy as np
 from torchvision import transforms
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import matplotlib.patches as patches4rectangle
 
 
 class Patch(object):
-    def __init__(self, image_batch, split,transform=None, show=False):
+    def __init__(self, image_batch, split,transform=None, show=False, labels_path="/home/aras/Desktop/SummerThesis/code/custom_lib/patch/rel_pos_labels.png"):
         self.bs, _, self.h, self.w = image_batch.shape
         self.split = split  # 3x3 or 2x2 grid
         self.i_row = round(self.h / self.split)
@@ -14,9 +15,9 @@ class Patch(object):
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
         self.transform = transform
+        self.labels_path = labels_path
 
     def __call__(self):
-
         patches = torch.Tensor()
         labels = np.empty(self.bs)
 
@@ -24,10 +25,9 @@ class Patch(object):
         #                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
         for idx, image in enumerate(self.image_batch):
-
             patch1, patch2, direction, cord_list1, cord_list2 = self.random_adjecent_patches(image)
 
-            if idx == 2 and self.show:
+            if (idx == 2 or idx == 0 ) and self.show:
                 self.show_cropped_patches(image, patch1, patch2, direction, cord_list1, cord_list2)
 
             if self.transform:
@@ -114,8 +114,10 @@ class Patch(object):
         gridimage_delete_later = image.clone()
         gridimage_delete_later = gridimage_delete_later.view(self.h, self.w)
 
-        # Ploting
+        label_img = mpimg.imread(self.labels_path)
+        plt.imshow(label_img)
 
+        # Ploting
         print("cordlist->[(row_s,row_e),(col_s,col_e)]")
         print("cordlist1", cord_list1)
         print("cordlist2", cord_list2)
@@ -138,18 +140,17 @@ class Patch(object):
         ax.add_patch(rect)
 
         plt.title('fullimage - label=' + str(direction))
-        plt.show()
 
         fig = plt.figure()
         plt.subplot(1, 2, 1)
         pil_patch1 = transforms.ToPILImage()(patch1)
         plt.imshow(pil_patch1, cmap='Greys_r')
-        plt.title('patch1-red')
+        plt.title('patch1-red',color='red')
 
         plt.subplot(1, 2, 2)
         pil_patch2 = transforms.ToPILImage()(patch2)
         plt.imshow(pil_patch2, cmap='Greys_r')
-        plt.title('patch2-blue')
+        plt.title('patch2-blue',color='blue')
         plt.show()
 
 

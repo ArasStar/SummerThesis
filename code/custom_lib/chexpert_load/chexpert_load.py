@@ -74,7 +74,7 @@ class CheXpertDataset(Dataset):
     """Face Landmarks dataset."""
 
     def __init__(self, csv_file, root_dir, transform=None, labels_path=None, list_classes=None ,path=""):
-
+        
         super().__init__()
         self.root_dir = root_dir
         self.transform = transform

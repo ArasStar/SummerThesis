@@ -66,8 +66,8 @@ dtype = torch.float32
 resize=320
 
 
-method="relative_position"
-show=False
+method="jigsaw"
+show=True
 #Params for relative_position
 split = 3.0
 
@@ -75,14 +75,6 @@ split = 3.0
 grid_crop_size=225
 patch_crop_size=64
 num_classes=300
-
-
-use_cuda = True
-if use_cuda and torch.cuda.is_available():
-    device = torch.device('cuda')
-else:
-    print("CUDA didn't work")
-    device = torch.device('cpu')
 
 file_name_p_set = F"permutation_set{num_classes}.pt"
 PATH_p_set = F"/home/aras/Desktop/SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
@@ -105,7 +97,7 @@ if method == "jigsaw":
   model.classifier = jigsaw.Basic_JigsawHead(1024,num_classes, gpu = use_cuda)
   
 elif method=="relative_position":
-    model.classifier = patch.Basic_RelativePositionHead(1024, gpu = use_cuda)
+  model.classifier = patch.Basic_RelativePositionHead(1024, gpu = use_cuda)
 
 model=model.to(device=device)
 
@@ -129,7 +121,10 @@ for epoch in range(num_epochs):
 
       patches, labels =  patcher()
       patches = patches.to(device=device, dtype=dtype)
-        
+      
+      if show:
+        print("showa giriyooor",show)
+        break
         
       labels = labels.to(device=device, dtype=torch.long)
         
@@ -160,7 +155,12 @@ print(F"{method}_num_classes{num_classes}_epoch{num_epochs}_batch{batch_size}_gr
 print(mins,"mins ", sec,"secs")
 
 file_name = F"jigsaw_num_classes{num_classes}_epoch{epoch}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
-PATH=F"/content/gdrive/My Drive/summerthesis/saved_model/{file_name}"
+
+if not show:
+  PATH=F"/content/gdrive/My Drive/summerthesis/saved_model/{file_name}"
+
+
+PATH = F"/home/aras/Desktop/saved_models/{file_name}"
 
 torch.save({
             'epoch': epoch,
@@ -169,4 +169,4 @@ torch.save({
             }, PATH)
 
 #torch.save(model.state_dict(), PATH)
-print('saved  model(model,optim,loss, epoch) to google drive')
+print('saved  model(model,optim,loss, epoch)')# to google drive')
