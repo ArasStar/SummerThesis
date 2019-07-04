@@ -73,7 +73,9 @@ num_epochs=3
 
 def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, batch_size=16,split = 3.0,
                                                                                             grid_crop_size=225,patch_crop_size=64,perm_set_size=300):
-
+  #Setting permuation_set
+  file_name_p_set = F"permutation_set{perm_set_size}.pt"
+  PATH_p_set = F"/home/aras/Desktop/SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
   #just ToTensor before pathch
   transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomVerticalFlip(), transforms.ToTensor()])
 
@@ -86,15 +88,20 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
   cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/self_train.csv",
                                                                   transform_train,batch_size, labels_path=labels_path,root_dir = root_dir)
 
+  model = models.densenet121()
+
   if method == "jigsaw":
-    file_name_p_set = F"permutation_set{perm_set_size}.pt"
-    PATH_p_set = F"/home/aras/Desktop/SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
-    model = models.densenet121(num_classes = perm_set_size)
     model.classifier = jigsaw.Basic_JigsawHead(1024,perm_set_size, gpu = use_cuda)
-    
+    file_name = F"{method}perm_set_size{perm_set_size}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
+
   elif method =="relative_position":
-    model = models.densenet121(num_classes = 8)
     model.classifier = patch.Basic_RelativePositionHead(1024, gpu = use_cuda)
+    file_name = F"{method}_epoch{num_epochs}_batch{batch_size}_split{split}.tar"
+
+  elif method== "naive_combination":
+    head_patch = patch.Basic_RelativePositionHead(1024, gpu = use_cuda)
+    head_jigsaw =jigsaw.Basic_JigsawHead(1024,perm_set_size, gpu = use_cuda)
+    file_name = F"{method}_epoch{num_epochs}_batch{batch_size}_split{split}_perm_set_size{perm_set_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
 
   model=model.to(device=device)
   
@@ -103,14 +110,10 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
   criterion = torch.nn.CrossEntropyLoss().to(device = device)
 
   currentDT = datetime.datetime.now()
-
-  if method == "jigsaw":
-    print(F"{method}_perm_set_size{perm_set_size}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
-  elif method == "relative_position":
-    print(F"{method}_epoch_{num_epochs}_batch{batch_size}_split{split}_CUDA{use_cuda}")
-
+  print('START--',file_name)
   plot_loss = []
   for epoch in range(num_epochs):
+
       for i,  (images, observations) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
         
         if method == "jigsaw":
@@ -118,6 +121,16 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
                                         transform =transform_after_patching, gpu = use_cuda, show=show)  
         elif method=="relative_position":
           patcher = patch.Patch(images,split=split,transform=transform_after_patching,show=show)
+        
+        elif method == "naive_combination":
+          if i%2:
+            model.classifier = head_jigsaw
+            patcher = jigsaw.Jigsaw(images, PATH_p_set, grid_crop_size=grid_crop_size, patch_crop_size=patch_crop_size,
+                                            transform =transform_after_patching, gpu = use_cuda, show=show)  
+          else:
+            model.classifier = head_patch
+            patcher = patch.Patch(images,split=split,transform=transform_after_patching,show=show)
+
 
         patches, labels =  patcher()
         patches = patches.to(device=device, dtype=torch.float32)
@@ -143,8 +156,9 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
         if (i+1) % 50 == 0:                              # Logging
             print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                     %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
-
-
+        if i==100:
+          break
+      break
   print('training done')
 
 
@@ -153,17 +167,8 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
   mins,sec=divmod(c.days * 86400 + c.seconds, 60)
 
   print(mins,"mins ", sec,"secs")
-
-  if method == "jigsaw":
-    print(F"{method}perm_set_size{perm_set_size}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
-    file_name = F"{method}perm_set_size{perm_set_size}_epoch{epoch}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
-
-  elif method == "relative_position":
-      file_name = F"{method}_epoch{epoch}_batch{batch_size}_split{split}.tar"
-      print(F"{method}_epoch{num_epochs}_batch{batch_size}_split{split}_CUDA{use_cuda}")
-
   
-
+  print('END--',file_name)
   PATH = F"/home/aras/Desktop/saved_models/{file_name}"
 
   torch.save({
@@ -194,7 +199,7 @@ learning_rate=0.0001
 batch_size=16
 resize=320
 
-
+'''
 method="relative_position"
 #Params for relative_position
 split = 3.0
@@ -203,11 +208,12 @@ grid_crop_size=225
 patch_crop_size=64
 perm_set_size=300
 num_epochs=3
-
+'''
 
 schedule=[{"method":"relative_position","num_epochs":3},
           {"method":"jigsaw","num_epochs":3},
-          {"method":"relative_position","num_epochs":3,"split":2}]
+          {"method":"relative_position","num_epochs":3,"split":2},
+          {"method":"naive_combination","num_epochs":3}]
 
 
 for kwargs in schedule:
