@@ -93,7 +93,7 @@ transform_after_patching= transforms.Compose([ transforms.ToPILImage(),transform
                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])                                 
 
 labels_path="/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt"
-cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("/home/aras/Desktop/CheXpert-v1.0-small/self_train.csv",
+cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/self_train.csv",
                                                                  transform_train,batch_size, root_dir = root_dir)
 
 model = models.densenet121(num_classes = num_classes)
