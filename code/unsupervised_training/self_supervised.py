@@ -78,6 +78,8 @@ split = 3.0
 grid_crop_size=225
 patch_crop_size=64
 num_classes=300
+num_epochs=1
+
 
 file_name_p_set = F"permutation_set{num_classes}.pt"
 PATH_p_set = F"/home/aras/Desktop/SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/{file_name_p_set}"
@@ -109,8 +111,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 criterion = torch.nn.CrossEntropyLoss().to(device = device)
 
 currentDT = datetime.datetime.now()
-
-num_epochs=1
 
 if method == "jigsaw":
   print(F"{method}_num_classes{num_classes}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}_CUDA{use_cuda}")
