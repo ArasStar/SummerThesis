@@ -62,10 +62,9 @@ radiologist_precision_recall={'Atelectasis': radiologist_precision_recall_Atelec
                            
                            
                            
+posw = {'Atelectasis': 2.3288235664367676, 'Cardiomegaly': 7.274592399597168,
+        'Consolidation': 14.112899780273438, 'Edema': 2.4250192642211914, 'Pleural Effusion': 1.5922006368637085}
 
-posw =	{ "Atelectasis": 0.03978906999041227,"Cardiomegaly": 0.4117037037037037,
-             "Consolidation": 1.9006291009943854,"Edema":0.3967002258546109,
-             "Pleural Effusion":0.41068838687969184}
 posw_list=[posw[x]for x in ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']]
 pos_weights=torch.tensor(posw_list)
 
