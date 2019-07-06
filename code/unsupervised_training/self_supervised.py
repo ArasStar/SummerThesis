@@ -92,16 +92,16 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
 
   if method == "jigsaw":
     model.classifier = jigsaw.Basic_JigsawHead(1024,perm_set_size, gpu = use_cuda)
-    file_name = F"{method}perm_set_size{perm_set_size}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
+    file_name = F"{method}perm_set_size{perm_set_size}_learning_rate{learning_rate}_epoch{num_epochs}_batch{batch_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
 
   elif method =="relative_position":
     model.classifier = patch.Basic_RelativePositionHead(1024, gpu = use_cuda)
-    file_name = F"{method}_epoch{num_epochs}_batch{batch_size}_split{split}.tar"
+    file_name = F"{method}_epoch{num_epochs}_batch{batch_size}_learning_rate{learning_rate}_split{split}.tar"
 
   elif method== "naive_combination":
     head_patch = patch.Basic_RelativePositionHead(1024, gpu = use_cuda)
     head_jigsaw =jigsaw.Basic_JigsawHead(1024,perm_set_size, gpu = use_cuda)
-    file_name = F"{method}_epoch{num_epochs}_batch{batch_size}_split{split}_perm_set_size{perm_set_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
+    file_name = F"{method}_epoch{num_epochs}_batch{batch_size}_learning_rate{learning_rate}_split{split}_perm_set_size{perm_set_size}_grid_size{grid_crop_size}_patch_size{patch_crop_size}.tar"
 
   model=model.to(device=device)
   
@@ -153,12 +153,9 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
         if i%200 == 0:
                 plot_loss.append(loss)
                 
-        if (i+1) % 50 == 0:                              # Logging
+        if (i+1) % 100 == 0:                              # Logging
             print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                     %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
-        if i==100:
-          break
-      break
   print('training done')
 
 
@@ -192,7 +189,6 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
 
 
 
-#'''(method="relative_position",num_epochs=3, learning_rate=0.0001, batch_size=16,split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=300)'''
 
 show=0
 learning_rate=0.0001
@@ -209,11 +205,15 @@ patch_crop_size=64
 perm_set_size=300
 num_epochs=3
 '''
+#'''(method="relative_position",num_epochs=3, learning_rate=0.0001, batch_size=16,split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=300)'''
 
 schedule=[{"method":"relative_position","num_epochs":3},
           {"method":"jigsaw","num_epochs":3},
           {"method":"relative_position","num_epochs":3,"split":2},
           {"method":"naive_combination","num_epochs":3}]
+
+schedule=[{"method":"naive_combination","num_epochs":6,"learning_rate":0.001},
+          {"method":"naive_combination","num_epochs":12}]
 
 
 for kwargs in schedule:
