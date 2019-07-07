@@ -35,21 +35,20 @@ else:
     device = torch.device('cpu')
 
 
-def transfer_learning(transfer_learning =0,   num_epochs=3,  pre_trained_PATH="", root_PATH = root_PATH):
+def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, pre_trained_PATH="", root_PATH = root_PATH):
 
     learning_rate=0.0001
     batch_size=8
-    resize = 320
 
     #after patch transformation
     transform= transforms.Compose([             transforms.Resize((resize,resize)),transforms.ToTensor(),
                                                 transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    labels_path=root_PATH+"SummerThesis/code/custom_lib/chexpert_load/labels.pt"
+    labels_path = root_PATH+"SummerThesis/code/custom_lib/chexpert_load/labels.pt"
 
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("CheXpert-v1.0-small/train.csv",transform,
-                                                                    batch_size,labels_path = labels_path,root_dir=root_PATH )
+                                                                    batch_size,labels_path = labels_path,root_dir= root_PATH )
 
     model=models.densenet121(num_classes = 5)
 
