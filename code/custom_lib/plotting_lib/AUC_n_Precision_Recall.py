@@ -4,17 +4,18 @@ from sklearn.metrics import roc_auc_score,precision_recall_curve,average_precisi
 
 class Curves_AUC_PrecionnRecall(object):
     
-    def __init__(self, chexpert_load,chexpert_dataset, probs, acts, list_classes,model_name=""):
+    def __init__(self, chexpert_load,chexpert_dataset, probs, acts,model_name=""):
       
       self.model_name = model_name
       self.list_classes = chexpert_dataset.list_classes
 
       self.auc_scores = {cheXpert_valid_dataset.list_classes[i]: roc_auc_score(acts[:,i],probs[:,i]) for i in range(len(cheXpert_valid_dataset.list_classes))}
       self.chexpert_load = chexpert_load
+      
       df_probs = pd.DataFrame(probs, columns=[cl+"probs" for cl in self.list_classes])
       df_acts = pd.DataFrame(acts, columns=[cl+"acts" for cl in self.list_classes])
 
-
+      probs_n_act_df = cheXpert_valid_dataset.observations_frame[['patient','study']]
       probs_n_act_df = probs_n_act_df.join(df_probs)
       probs_n_act_df = probs_n_act_df.join(df_acts)
 
@@ -75,11 +76,10 @@ class Curves_AUC_PrecionnRecall(object):
         ax[1,i].axis(xmin=0.0,xmax=1.0,ymin=0.0,ymax=1.01)
         ax[1,i].set_ylabel('Precision')
         ax[1,i].set_xlabel('Sensitivity')
-        plt.show()
         #print("recall", recall)
         #print("FPR", false_positive_rate)
 
-
+    plt.show()
     plt.savefig("saved_AUC_and_P_R.pdf")
     
     def auc_difference_print():
@@ -141,6 +141,7 @@ class Curves_AUC_PrecionnRecall(object):
            count = count + 1
 
       return count
+    
 
      
 
