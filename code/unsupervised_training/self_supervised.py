@@ -112,6 +112,7 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
                                                                   transform_train,batch_size, labels_path=labels_path,root_dir = root_dir)
 
   model=model.to(device=device)
+  model.train()
   currentDT = datetime.datetime.now()
   print('START--',file_name)
   for epoch in range(num_epochs):
@@ -192,24 +193,6 @@ def self_train(method="relative_position",num_epochs=3, learning_rate=0.0001, ba
 
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
-
-  '''
-  fig=plt.figure()
-  fig.suptitle("loss plot")
-  plt.plot(plot_loss)
-  plt.xlabel('iterations')
-  plt.ylabel('loss')
-  plt.show()
-  '''
-
-
-
-
-
-show=0
-learning_rate=0.0001
-batch_size=16
-resize=320
 
 '''
 method="relative_position"

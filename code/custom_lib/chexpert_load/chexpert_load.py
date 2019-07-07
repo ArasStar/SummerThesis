@@ -59,14 +59,12 @@ radiologist_precision_recall={'Atelectasis': radiologist_precision_recall_Atelec
                            
                            
                            
-                           
-                           
-                           
-posw = {'Atelectasis': 2.3288235664367676, 'Cardiomegaly': 7.274592399597168,
-        'Consolidation': 14.112899780273438, 'Edema': 2.4250192642211914, 'Pleural Effusion': 1.5922006368637085}
 
-posw_list=[posw[x]for x in ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']]
-pos_weights=torch.tensor(posw_list)
+def load_posw(list_classes =  ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion'] ):
+    posw = {'Atelectasis': 2.3288235664367676, 'Cardiomegaly': 7.274592399597168,'Consolidation': 14.112899780273438, 'Edema': 2.4250192642211914, 'Pleural Effusion': 1.5922006368637085}
+    posw_list=[posw[x]for x in list_classes]
+        
+    return torch.tensor(posw_list)
 
 
 class CheXpertDataset(Dataset):
@@ -78,7 +76,7 @@ class CheXpertDataset(Dataset):
         self.root_dir = root_dir
         self.transform = transform
         self.list_classes = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']
-        self.observations_frame = pd.read_csv(csv_file)
+        self.observations_frame = pd.read_csv(root_dir+csv_file)
         self.observations_frame['patient'] = self.observations_frame.Path.str.split('/',3,True)[2]
         self.observations_frame['study'] = self.observations_frame.Path.str.split('/',4,True)[3]
 
@@ -118,7 +116,7 @@ class CheXpertDataset(Dataset):
     def __getitem__(self, idx):
         
         #img_name = os.path.join(os.getcwd(),self.root_dir,self.observations_frame.iloc[idx, 0])
-        img_name = os.getcwd() + self.root_dir + self.observations_frame.loc[idx, ['Path']].values[0]
+        img_name =  self.root_dir + self.observations_frame.loc[idx, ['Path']].values[0]
         #print("hoooop",img_name)
 
         image = imread(img_name)
