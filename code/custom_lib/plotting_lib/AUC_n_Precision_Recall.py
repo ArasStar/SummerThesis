@@ -141,7 +141,10 @@ class Curves_AUC_PrecionnRecall(object):
            count = count + 1
 
       return count
-    
+ 
+def plot_loss(plot_loss,iter_range=200):
+    x = np.arange(len(plot_loss))*iter_range
+    plt.plot(x,plot_loss)
 
      
 
