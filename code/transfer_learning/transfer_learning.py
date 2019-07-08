@@ -96,6 +96,10 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, batch_s
             if (i+1) % 100 == 0:                              # Logging
                 print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                     %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
+                aftertDT = datetime.datetime.now()
+                c=aftertDT-currentDT
+                mins,sec = divmod(c.days * 86400 + c.seconds, 60)
+                print(mins,"mins ", sec,"secs")
 
             if i % 200 == 0:
                 plot_loss.append(loss)
