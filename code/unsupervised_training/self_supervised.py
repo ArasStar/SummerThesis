@@ -258,6 +258,8 @@ schedule=[{"method":"Relative_Position","num_epochs":3,"split":3.0}]
 schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/self_supervised/Relative_Position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
 
 schedule=[{"method":"Jigsaw","num_epochs":3}]
+schedule=[{"method":"Relative_Position","num_epochs":3}]
+schedule =[{"method":"naive_combination","num_epochs":3}]
 
 
 for kwargs in schedule:
