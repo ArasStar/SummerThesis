@@ -72,7 +72,7 @@ class CheXpertDataset(Dataset):
 
     def __init__(self, csv_file, root_dir, transform=None, labels_path=None, list_classes=None ,path=""):
 
-        super().__init__()
+        #super().__init__()
         self.root_dir = root_dir
         self.transform = transform
         self.list_classes = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']
@@ -108,7 +108,7 @@ class CheXpertDataset(Dataset):
                 labels = torch.cat((labels,tensor_arr),dim=0)
 
             self.labels = labels
-            torch.save(self.labels,"/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt")
+            #torch.save(self.labels,"/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt")
 
        # df_labels = pd.DataFrame(labels.numpy(),columns=[cl+"_feat" for cl in self.list_classes])
        #self.observations_frame.join(df_labels)

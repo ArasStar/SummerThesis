@@ -7,16 +7,16 @@ import numpy as np
 
 
 class Curves_AUC_PrecionnRecall(object):
-    
+
     def __init__(self, chexpert_load,chexpert_dataset, probs, acts,model_name="",root_PATH="" ):
-      
+
       self.root_PATH = root_PATH+"SummerThesis/code/custom_lib/plotting_lib/"
       self.model_name = model_name
       self.list_classes = chexpert_dataset.list_classes
 
       self.auc_scores = {chexpert_dataset.list_classes[i]: roc_auc_score(acts[:,i],probs[:,i]) for i in range(len(chexpert_dataset.list_classes))}
       self.chexpert_load = chexpert_load
-      
+
       df_probs = pd.DataFrame(probs, columns=[cl+"probs" for cl in self.list_classes])
       df_acts = pd.DataFrame(acts, columns=[cl+"acts" for cl in self.list_classes])
 
@@ -27,7 +27,7 @@ class Curves_AUC_PrecionnRecall(object):
       self.acts = probs_n_act_df.groupby(['patient','study'])[[cl+"acts" for cl in self.list_classes]].max().values
       self.probs = probs_n_act_df.groupby(['patient','study'])[[cl+"probs" for cl in self.list_classes]].mean().values
 
-        
+
 
     def __call__(self):
       color=["r","g","b"]
@@ -64,7 +64,7 @@ class Curves_AUC_PrecionnRecall(object):
 
         ax[0,i].scatter(rad_FPR[-1],rad_TPR[-1],s=50,c="darkblue",marker="x",label="RadMaj"+ str((rad_FPR[-1],rad_TPR[-1])))
 
-        ax[0,i].legend(loc = 'lower right') 
+        ax[0,i].legend(loc = 'lower right')
         ax[0,i].axis(xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.01)
         ax[0,i].set_xlabel('False Positive Rate')
         ax[0,i].set_ylabel('True Positive Rate')
@@ -87,7 +87,7 @@ class Curves_AUC_PrecionnRecall(object):
 
       plt.savefig(self.root_PATH+"saved_AUC_and_P_R"+ self.model_name+ ".pdf")
 
-    
+
     def auc_difference_print(self):
       #average results reported in the associated paper
       chexpert_auc_scores = {'Atelectasis':      0.858,
@@ -101,13 +101,15 @@ class Curves_AUC_PrecionnRecall(object):
       avg_chexpert_auc = sum(list(chexpert_auc_scores.values()))/len(chexpert_auc_scores.values())
       avg_auc          = sum(list(self.auc_scores.values()))/len(self.auc_scores.values())
 
-      [print(f'{k: <{max_feat_len}}\t auc: {self.auc_scores[k]:.3}\t chexpert auc: {chexpert_auc_scores[k]:.3}\t difference:\
-      {(chexpert_auc_scores[k]-self.auc_scores[k]):.3}') for k in self.list_classes]
+      #[print(f'{k: <{max_feat_len}}\t auc: {self.auc_scores[k]:.3}\t chexpert auc: {chexpert_auc_scores[k]:.3}\t difference:\
+      #{(chexpert_auc_scores[k]-self.auc_scores[k]):.3}') for k in self.list_classes]
 
-      print(f'\nAverage auc: {avg_auc:.3} \t CheXpert average auc {avg_chexpert_auc:.3}\t Difference {(avg_chexpert_auc-avg_auc):.3}')
-
-    
-#print(auc_scores)
+      #print(f'\nAverage auc: {avg_auc:.3} \t CheXpert average auc {avg_chexpert_auc:.3}\t Difference {(avg_chexpert_auc-avg_auc):.3}')
+      print("auc_model",self.auc_scores)
+      print("auc_chexpert",chexpert_auc_scores)
+      print("AVG_auc_model",avg_auc)
+      print("AVG_auc_chexpert",avg_chexpert_auc)
+      #print(auc_scores)
 
 
     def count_points_below(self,x_points,y_points,x,y,num_rads=4):
@@ -142,12 +144,12 @@ class Curves_AUC_PrecionnRecall(object):
 
           y_closest = y_small+ (y_big-y_small) * ((x_point-x_small)/(x_big-x_small))
 
-        if y_point < y_closest :  
+        if y_point < y_closest :
           #above the line
            count = count + 1
 
       return count
- 
+
     def plot_loss(self, plot_loss, iter_range=200):
         x = np.arange(len(plot_loss))*iter_range
         plt.figure('loss_plot'+self.model_name)
@@ -157,6 +159,6 @@ class Curves_AUC_PrecionnRecall(object):
         plt.savefig(self.root_PATH+'plot_loss_'+self.model_name+ '.png')
 
 
-     
+
 
 #how to check points above or below line

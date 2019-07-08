@@ -19,8 +19,11 @@ import matplotlib.pyplot as plt
 
 import datetime
 import sys
+print("hooop")
 
-root_PATH = "/home/aras/Desktop/"
+root_PATH = "/homes/ay1218/Desktop/"
+#root_PATH = "/home/aras/Desktop/"
+
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 import plot_loss_auc_n_precision_recall
@@ -35,10 +38,10 @@ else:
     device = torch.device('cpu')
 
 
-def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, pre_trained_PATH="", root_PATH = root_PATH):
+def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, batch_size=8, pre_trained_PATH="", root_PATH = root_PATH):
 
     learning_rate=0.0001
-    batch_size=8
+
 
     #after patch transformation
     transform= transforms.Compose([             transforms.Resize((resize,resize)),transforms.ToTensor(),
@@ -57,11 +60,11 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, pre_tra
         checkpoint = torch.load(pre_trained_PATH)
         model.load_state_dict(checkpoint['model_state_dict'],strict=False) # just features get downloaded classifier stays
         splited = pre_trained_PATH.split('/')
-        file_path = "/".join(splited[:-1])+F'/TL_epoch{num_epochs}_batch{batch_size}_learning_rate{learning_rate}---'+splited[-1]
+        file_path = "/".join(splited[:-1])+"/TL_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"---" + splited[-1]
     else:
         print("training from scratch")
-        file_path =root_PATH +F"saved_models/from_scratch__epoch{num_epochs}_batch{batch_size}_learning_rate{learning_rate}.tar"
-    
+        file_path =root_PATH +"saved_models/from_scratch__epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+".tar"
+
     model=model.to(device=device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion =nn.BCEWithLogitsLoss(pos_weight=chexpert_load.load_posw()).to(device=device)
@@ -75,32 +78,32 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, pre_tra
     model.train()
     for epoch in range(num_epochs):
         for i,  (images, labels) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
-            
-            
+
+
             images = images.to(device=device,dtype=torch.float)
             labels = labels.to(device=device,dtype=torch.float)
-        
+
             outputs = model(images).to(device=device)                             # Forward pass: compute the output class given a image
-                
+
             loss = criterion(outputs, labels)           # Compute the loss: difference between the output class and the pre-given label
 
             optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
             loss.backward()                                   # Backward pass: compute the weight
             optimizer.step()                                  # Optimizer: update the weights of hidden nodes
-            
-            
+
+
             if (i+1) % 100 == 0:                              # Logging
                 print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
                     %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
-            
+
             if i % 200 == 0:
                 plot_loss.append(loss)
 
 
             #DELETEEEEE
- 
+
     print('training done')
-    
+
     aftertDT = datetime.datetime.now()
     c=aftertDT-currentDT
     mins,sec = divmod(c.days * 86400 + c.seconds, 60)
@@ -116,7 +119,7 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, pre_tra
 
     transform= transforms.Compose([             transforms.Resize((resize,resize)),transforms.ToTensor(),
                                                 transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]) 
+                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
     probs= []
     probs=np.array(probs)
@@ -126,27 +129,27 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, pre_tra
     model.eval()
     with torch.no_grad():
         for images, labels in valid_dataloader:
-        
+
             images = images.to(device = device)
             labels = labels.to(device = device)
             outputs = model(images)
-            
+
             #sigmoid gets rounded
             probabilities= torch.sigmoid(outputs)
             #predictions=probs.round()
-            
+
             probs = probabilities.cpu().numpy()  if probs.size ==0 else np.vstack((probs,probabilities.cpu().numpy()))
             acts = labels.cpu().numpy()  if acts.size ==0 else np.vstack((acts,labels.cpu().numpy()))
-    
+
     # SAVING PLOTS and models
     curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(chexpert_load,cheXpert_valid_dataset, probs, acts, model_name="TL_"+ file_path.split("/")[-1][:-4],root_PATH=root_PATH)
     curves()
     curves.plot_loss(plot_loss)
 
-    
+
 
     print('file_path', file_path)
-    
+
     torch.save({
               'epoch':  num_epochs ,
               'model_state_dict': model.state_dict(),
@@ -163,7 +166,7 @@ schedule=[  {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_
 schedule=[  {"transfer_learning":0},
             {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/naive_combination_epoch12_batch16_learning_rate0.0001_split3.0_perm_set_size300_grid_size225_patch_size64.tar"}]
 
+
+schedule=[  {"transfer_learning":0, "batch_size": 16}]
 for kwargs in schedule:
     transfer_learning(**kwargs)
-
-
