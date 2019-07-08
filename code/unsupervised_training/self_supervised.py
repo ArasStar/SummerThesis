@@ -48,7 +48,7 @@ else:
 #root_dir = '/../'
 
 def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, batch_size=16, split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=300 ,
-                  from_checkpoint=None , combo=["relative_position","jigsaw"], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, show=False):
+                  from_checkpoint=None , combo=["Relative_Position","Jigsaw"], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, show=False):
   
   #Setting permuation_set
   file_name_p_set = "permutation_set"+ str(perm_set_size)+".pt"
@@ -108,7 +108,7 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
       elif h =="Jigsaw":
         kwarg = { "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
       
-      heads.append((method_head, to_patch, kwarg,h))
+      heads.append((method_head, to_patch, kwarg, h))
 
   if from_checkpoint:
     
@@ -116,6 +116,7 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
     checkpoint = torch.load(from_checkpoint, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'], strict=False)#loading features
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
     for state in optimizer.state.values():
       for k, v in state.items():
         if torch.is_tensor(v):
@@ -153,9 +154,6 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
     
     
 
-  
-                                 
-
   labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt"
   cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train.csv",
                                                                   transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset)
@@ -174,44 +172,34 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
         else:
           model_set = heads[i % n_heads]
           model.classifier = model_set[0]
-          patcher = model_set[1](image_batch= images,**model_set(2))
-          '''
-          if i%2:
-            model.classifier = head_jigsaw
-            patcher = jigsaw.Jigsaw(images, PATH_p_set, grid_crop_size=grid_crop_size, patch_crop_size=patch_crop_size,
-                                            transform =transform_after_patching, gpu = use_cuda, show=show)  
-          else:
-            model.classifier = head_patch
-            patcher = patch.Patch(images,split=split,transform=transform_after_patching,show=show)
-          '''
-        patches, labels =  patcher()
-        patches = patches.to(device = device, dtype = torch.float32)
-  
-        if show:
-          print("showa giriyooor",show)
-          break
+          patcher = model_set[1](image_batch= images,**model_set[2])
           
+        patches, labels =  patcher()
+        patches = patches.to(device = device, dtype = torch.float32)    
         labels = labels.to(device=device, dtype=torch.long)
 
         #break
-        outputs = model(patches)              # Forward pass: compute the output class given a image
-        #print(outputs.shape)
-        #print(labels.shape)
+        outputs = model(patches)                          # Forward pass: compute the output class given a image
 
         loss = criterion(outputs, labels)                 # Compute the loss: difference between the output class and the pre-given label
         optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
         loss.backward()                                   # Backward pass: compute the weight
         optimizer.step()                                  # Optimizer: update the weights of hidden nodes
         
-
         if i%200 == 0:
-                plot_loss.append(loss)
-          
+          plot_loss.append(loss)
                 
         if (i+1) % 100 == 0:                              # Logging
-            print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
-                    %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
-        break
+          print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f' %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
+          aftertDT = datetime.datetime.now()
+          c=aftertDT-currentDT
+          mins,sec=divmod(c.days * 86400 + c.seconds, 60)
+          print(mins,"mins ", sec,"secs")
+        
+        if show:
+          print("showa giriyooor",show)
+          break
+      
   print('training done')
 
   aftertDT = datetime.datetime.now()
@@ -244,6 +232,7 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
 
+
 '''
 method="relative_position"
 #Params for relative_position
@@ -261,17 +250,6 @@ schedule=[{"method":"relative_position","num_epochs":3},
           {"method":"relative_position","num_epochs":3,"split":2},
           {"method":"naive_combination","num_epochs":3}]
 
-schedule=[{"method":"naive_combination","num_epochs":6,"learning_rate":0.001},
-          {"method":"naive_combination","num_epochs":12}]
-
-
-
-schedule=[{"method":"relative_position","num_epochs":6,"split":2},
-          {"num_epochs":6,"from_checkpoint":"/home/aras/Desktop/saved_models/naive_combination_epoch12_batch16_learning_rate0.0001_split3.0_perm_set_size300_grid_size225_patch_size64.tar"},
-          {"num_epochs":6,"from_checkpoint":"/home/aras/Desktop/saved_models/naive_combination_epoch6_batch16_learning_rate0.001_split3.0_perm_set_size300_grid_size225_patch_size64.tar"},
-          {"num_epochs":3,"from_checkpoint":"Relative_position_epoch3_batch16_learning_rate0.0001_split2.tar"},
-          {"num_epochs":3,"from_checkpoint":"relative_position_epoch3_batch16_learning_rate0.0001_split3.tar"}]
-
 
 
 schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/self_supervised/Relative_Position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
@@ -279,8 +257,7 @@ schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/se
 schedule=[{"method":"Relative_Position","num_epochs":3,"split":3.0}]
 schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/self_supervised/Relative_Position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
 
-schedule=[{"method":"Jigsaw","num_epochs":2}]
-schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/self_supervised/Jigsaw_epoch2_batch16_learning_rate0.0001_perm_set_size300_grid_size225_patch_size64.tar"}]
+schedule=[{"method":"Jigsaw","num_epochs":3}]
 
 
 for kwargs in schedule:
