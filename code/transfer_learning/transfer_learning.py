@@ -21,6 +21,7 @@ import datetime
 import sys
 print("hooop")
 
+root_PATH_dataset = "/vol/bitbucket/ay1218/"
 root_PATH = "/homes/ay1218/Desktop/"
 #root_PATH = "/home/aras/Desktop/"
 
@@ -38,7 +39,7 @@ else:
     device = torch.device('cpu')
 
 
-def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, batch_size=8, pre_trained_PATH="", root_PATH = root_PATH):
+def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, batch_size=8, pre_trained_PATH="", root_PATH = root_PATH,root_PATH_dataset=root_PATH_dataset):
 
     learning_rate=0.0001
 
@@ -51,7 +52,7 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, batch_s
     labels_path = root_PATH+"SummerThesis/code/custom_lib/chexpert_load/labels.pt"
 
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load("CheXpert-v1.0-small/train.csv",transform,
-                                                                    batch_size,labels_path = labels_path,root_dir= root_PATH )
+                                                                    batch_size,labels_path = labels_path,root_dir= root_PATH_dataset )
 
     model=models.densenet121(num_classes = 5)
 
@@ -115,7 +116,7 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, batch_s
     #VALIDATION SET
 
     cheXpert_valid_dataset, valid_dataloader = chexpert_load.chexpert_load("CheXpert-v1.0-small/valid.csv",transform,
-                                                                 batch_size, shuffle=False,root_dir=root_PATH)
+                                                                 batch_size, shuffle=False,root_dir=root_PATH_dataset)
 
     transform= transforms.Compose([             transforms.Resize((resize,resize)),transforms.ToTensor(),
                                                 transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
