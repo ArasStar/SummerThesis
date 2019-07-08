@@ -76,7 +76,7 @@ class CheXpertDataset(Dataset):
         self.root_dir = root_dir
         self.transform = transform
         self.list_classes = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']
-        self.observations_frame = pd.read_csv(root_dir+csv_file)
+        self.observations_frame = pd.read_csv(csv_file)
         self.observations_frame['patient'] = self.observations_frame.Path.str.split('/',3,True)[2]
         self.observations_frame['study'] = self.observations_frame.Path.str.split('/',4,True)[3]
 
@@ -122,7 +122,6 @@ class CheXpertDataset(Dataset):
         #img_name = os.path.join(os.getcwd(),self.root_dir,self.observations_frame.iloc[idx, 0])
         img_name =  self.root_dir + self.observations_frame.loc[idx, ['Path']].values[0]
         #print("hoooop",img_name)
-
         image = imread(img_name)
         image = transforms.ToPILImage()(image)
 

@@ -22,9 +22,9 @@ import sys
 print("hooop")
 
 root_PATH_dataset = "/vol/bitbucket/ay1218/"
-root_PATH = "/homes/ay1218/Desktop/"
+#root_PATH = "/homes/ay1218/Desktop/"
+root_PATH = "/home/aras/Desktop/"
 root_PATH_dataset = root_PATH
-#root_PATH = "/home/aras/Desktop/"
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
@@ -85,14 +85,15 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, batch_s
             images = images.to(device=device,dtype=torch.float)
             labels = labels.to(device=device,dtype=torch.float)
 
-            outputs = model(images).to(device=device)                             # Forward pass: compute the output class given a image
+            outputs = model(images).to(device=device)  
+                                                          # Forward pass: compute the output class given a image
 
             loss = criterion(outputs, labels)           # Compute the loss: difference between the output class and the pre-given label
 
             optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
             loss.backward()                                   # Backward pass: compute the weight
             optimizer.step()                                  # Optimizer: update the weights of hidden nodes
-
+           
 
             if (i+1) % 100 == 0:                              # Logging
                 print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
@@ -173,6 +174,6 @@ schedule=[  {"transfer_learning":0},
             {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/naive_combination_epoch12_batch16_learning_rate0.0001_split3.0_perm_set_size300_grid_size225_patch_size64.tar"}]
 
 
-schedule=[  {"transfer_learning":0, "batch_size": 16}]
+schedule=[  {"transfer_learning":0, "batch_size": 8}]
 for kwargs in schedule:
     transfer_learning(**kwargs)
