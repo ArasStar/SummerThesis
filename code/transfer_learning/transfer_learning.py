@@ -23,6 +23,7 @@ print("hooop")
 
 root_PATH_dataset = "/vol/bitbucket/ay1218/"
 root_PATH = "/homes/ay1218/Desktop/"
+root_PATH_dataset = root_PATH
 #root_PATH = "/home/aras/Desktop/"
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
