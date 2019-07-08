@@ -1,0 +1,4 @@
+**CSG LAB COMP**
+TRAIN FROM SCRATCH 320x320 size
+
+100iter --  0 min 55 sec
