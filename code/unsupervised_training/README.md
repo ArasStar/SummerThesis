@@ -2,6 +2,7 @@ UNSUPERVISED METHODS
 
 
 **DELL XPS15 1050 ti GTX**
+
 START-- Jigsaw_epoch3_batch16_learning_rate0.0001_perm_set_size300_grid_size225_patch_size64.tar 
 
 100 iter --0 mins 38 sec
