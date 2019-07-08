@@ -20,10 +20,9 @@ import matplotlib.pyplot as plt
 import datetime
 import sys
 print("hooop")
-
-root_PATH_dataset = "/vol/bitbucket/ay1218/"
+root_PATH_dataset = "/vol/gpudata/ay1218/"
 root_PATH = "/homes/ay1218/Desktop/"
-root_PATH_dataset = root_PATH
+#root_PATH_dataset = root_PATH
 #root_PATH = "/home/aras/Desktop/"
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
@@ -85,13 +84,14 @@ def transfer_learning(transfer_learning =0,   num_epochs=3, resize= 320, batch_s
             images = images.to(device=device,dtype=torch.float)
             labels = labels.to(device=device,dtype=torch.float)
 
-            outputs = model(images).to(device=device)                             # Forward pass: compute the output class given a image
+            outputs = model(images).to(device=device)   # Forward pass: compute the output class given a image
 
             loss = criterion(outputs, labels)           # Compute the loss: difference between the output class and the pre-given label
 
             optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
             loss.backward()                                   # Backward pass: compute the weight
             optimizer.step()                                  # Optimizer: update the weights of hidden nodes
+
 
 
             if (i+1) % 100 == 0:                              # Logging
