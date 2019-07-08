@@ -184,15 +184,15 @@ class Jigsaw(object):
         plt.show()
 
             
-class Basic_JigsawHead(torch.nn.Module):
+class Basic_Head(torch.nn.Module):
     def __init__(self, D_in, D_out, gpu=True):
         """
         No task head just concating what comes out just before default classifer then applying linear
         In the constructor we instantiate two nn.Linear modules and assign them as
         member variables.
         """
-        super(Basic_JigsawHead, self).__init__()
-        self.device = torch.device('cuda') if gpu else torch.device('cpu')
+        super(Basic_Head, self).__init__()
+        self.device = torch.device('cuda:0') if gpu else torch.device('cpu')
         self.classifier = torch.nn.Linear(D_in*9,D_out).to(device = self.device)
         
 

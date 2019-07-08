@@ -6,7 +6,7 @@ import matplotlib.image as mpimg
 import matplotlib.patches as patches4rectangle
 
 
-class Patch(object):
+class Relative_Position(object):
     def __init__(self, image_batch, split,transform=None, show=False, labels_path="/home/aras/Desktop/SummerThesis/code/custom_lib/patch/rel_pos_labels.png"):
         self.bs, _, self.h, self.w = image_batch.shape
         self.split = split  # 3x3 or 2x2 grid
@@ -155,15 +155,15 @@ class Patch(object):
 
 
 
-class Basic_RelativePositionHead(torch.nn.Module):
+class Basic_Head(torch.nn.Module):
     def __init__(self, D_in, D_out=8, gpu=True):
         """
         No task head just concating what comes out just before default classifer then applying linear
         In the constructor we instantiate two nn.Linear modules and assign them as
         member variables.
         """
-        super(Basic_RelativePositionHead, self).__init__()
-        self.device = torch.device('cuda') if gpu else torch.device('cpu')
+        super(Basic_Head, self).__init__()
+        self.device = torch.device('cuda:0') if gpu else torch.device('cpu')
         self.classifier = torch.nn.Linear(D_in*2,D_out).to(device = self.device)
 
     def forward(self, x):

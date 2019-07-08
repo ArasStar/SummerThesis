@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import datetime
 import sys
 print("hooop")
+
 root_PATH_dataset = "/vol/gpudata/ay1218/"
 root_PATH = "/homes/ay1218/Desktop/"
 #root_PATH_dataset = root_PATH
@@ -173,6 +174,6 @@ schedule=[  {"transfer_learning":0},
             {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/naive_combination_epoch12_batch16_learning_rate0.0001_split3.0_perm_set_size300_grid_size225_patch_size64.tar"}]
 
 
-schedule=[  {"transfer_learning":0, "batch_size": 16}]
+schedule=[  {"transfer_learning":0, "batch_size": 8}]
 for kwargs in schedule:
     transfer_learning(**kwargs)
