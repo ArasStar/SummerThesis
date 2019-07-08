@@ -8,9 +8,9 @@ import numpy as np
 
 class Curves_AUC_PrecionnRecall(object):
 
-    def __init__(self, chexpert_load,chexpert_dataset, probs, acts,model_name="",root_PATH="" ):
+    def __init__(self, chexpert_load,chexpert_dataset, probs, acts,model_name,root_PATH ):
 
-      self.root_PATH = root_PATH+"SummerThesis/code/custom_lib/plotting_lib/"
+      self.root_PATH = root_PATH
       self.model_name = model_name
       self.list_classes = chexpert_dataset.list_classes
 
@@ -85,7 +85,7 @@ class Curves_AUC_PrecionnRecall(object):
         #print("recall", recall)
         #print("FPR", false_positive_rate)
 
-      plt.savefig(self.root_PATH+"saved_AUC_and_P_R"+ self.model_name+ ".pdf")
+      plt.savefig("/"+self.root_PATH+"saved_AUC_and_P_R"+ self.model_name+ ".pdf")
 
 
     def auc_difference_print(self):
@@ -156,7 +156,7 @@ class Curves_AUC_PrecionnRecall(object):
         plt.plot(x,plot_loss)
         plt.xlabel('iteratons')
         plt.ylabel('loss')
-        plt.savefig(self.root_PATH+'plot_loss_'+self.model_name+ '.png')
+        plt.savefig("/"+self.root_PATH+'plot_loss_'+self.model_name+ '.png')
 
 
 

@@ -92,7 +92,7 @@ class CheXpertDataset(Dataset):
             self.list_classes=list_classes
 
         elif csv_file.__contains__("valid"):
-            self.labels = torch.from_numpy(observations_frame.loc[:, self.list_classes].values).type(torch.FloatTensor)
+            self.labels = torch.from_numpy(self.observations_frame.loc[:, self.list_classes].values).type(torch.FloatTensor)
 
 
         else:

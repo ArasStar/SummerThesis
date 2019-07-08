@@ -19,10 +19,12 @@ import matplotlib.pyplot as plt
 
 import datetime
 import sys
-
-root_PATH_dataset = "/vol/bitbucket/ay1218/"
+save_model_path="/vol/bitbucket/ay1218/"
+root_PATH_dataset = "/vol/gpudata/ay1218/"
 root_PATH = "/home/aras/Desktop/"
-root_PATH_dataset = root_PATH
+
+#root_PATH_dataset = root_PATH
+#save_model_path=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/relative_position')
@@ -48,20 +50,20 @@ else:
 #root_dir = '/../'
 
 def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, batch_size=16, split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=300 ,
-                  from_checkpoint=None , combo=["Relative_Position","Jigsaw"], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, show=False):
-  
+                  from_checkpoint=None , combo=["Relative_Position","Jigsaw"], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset,save_model_path=save_model_path, show=False):
+
   #Setting permuation_set
   file_name_p_set = "permutation_set"+ str(perm_set_size)+".pt"
   PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/"+file_name_p_set
   out_D ={"Relative_Position":8 ,"Jigsaw":perm_set_size}
-  
+
   #just ToTensor before patch
   transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomVerticalFlip(), transforms.ToTensor()])
 
   #after patch transformation
   transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
                                                 transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])  
+                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
   model = models.densenet121()
   optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -92,26 +94,26 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
       kwarg = {"split":split,"transform":transform_after_patching,"show":show}
 
   elif method == "naive_combination":
-    
+
     file_name = method+"**"+"**".join(combo)+"**_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"_split"+str(split)+"_perm_set_size"+str(perm_set_size)+"_grid_size"+str(grid_crop_size)+"_patch_size"+str(patch_crop_size)+".tar"
     n_heads = len(combo)
     heads = []
-    for h in combo:  
-      
+    for h in combo:
+
       head_module = head_libs[h]
       method_head = head_module.Basic_Head(1024,out_D[h], gpu = use_cuda)
       to_patch = getattr(head_module,h)
 
       if h == "Relative_Position":
         kwarg = {"split":split,"transform":transform_after_patching,"show":show}
-      
+
       elif h =="Jigsaw":
         kwarg = { "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
-      
+
       heads.append((method_head, to_patch, kwarg, h))
 
   if from_checkpoint:
-    
+
     #loading model
     checkpoint = torch.load(from_checkpoint, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'], strict=False)#loading features
@@ -125,7 +127,7 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
     plot_loss = checkpoint['loss']
 
     if from_checkpoint.__contains__("combination"):
-      head_dict =  checkpoint["model_heads"] # dict headname: headstateDict 
+      head_dict =  checkpoint["model_heads"] # dict headname: headstateDict
 
       for head in heads:
         h_name = head[-1]
@@ -133,8 +135,8 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
 
     else:
       head_task.load_state_dict(checkpoint['model_head'])
-  
-    #aranging names and params 
+
+    #aranging names and params
     start_i = from_checkpoint.index('epoch')
     end_i =from_checkpoint.index('_batch')
     initial_epoch = int(from_checkpoint[start_i+5:end_i])
@@ -149,10 +151,10 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
       start_i = from_checkpoint.index('set_size')
       end_i = from_checkpoint.index('_grid_size')
       perm_set_size = float(from_checkpoint[start_i+8: end_i])
-    
+
     file_name=file_name_after_checkpoint
-    
-    
+
+
 
   labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt"
   cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train.csv",
@@ -165,17 +167,17 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
   for epoch in range(num_epochs):
 
       for i,  (images, observations) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
-        
+
         if  not method.__contains__("combination"):
           patcher = to_patch(image_batch=images,**kwarg)
-        
+
         else:
           model_set = heads[i % n_heads]
           model.classifier = model_set[0]
           patcher = model_set[1](image_batch= images,**model_set[2])
-          
+
         patches, labels =  patcher()
-        patches = patches.to(device = device, dtype = torch.float32)    
+        patches = patches.to(device = device, dtype = torch.float32)
         labels = labels.to(device=device, dtype=torch.long)
 
         #break
@@ -185,21 +187,21 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
         optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
         loss.backward()                                   # Backward pass: compute the weight
         optimizer.step()                                  # Optimizer: update the weights of hidden nodes
-        
+
         if i%200 == 0:
           plot_loss.append(loss)
-                
+
         if (i+1) % 100 == 0:                              # Logging
           print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f' %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
           aftertDT = datetime.datetime.now()
           c=aftertDT-currentDT
           mins,sec=divmod(c.days * 86400 + c.seconds, 60)
           print(mins,"mins ", sec,"secs")
-        
+
         if show:
           print("showa giriyooor",show)
           break
-      
+
   print('training done')
 
   aftertDT = datetime.datetime.now()
@@ -207,7 +209,7 @@ def self_train(method="Relative_Position",num_epochs=3, learning_rate=0.0001, ba
   mins,sec=divmod(c.days * 86400 + c.seconds, 60)
   print(mins,"mins ", sec,"secs")
 
-  PATH = file_name_after_checkpoint if from_checkpoint else root_PATH_dataset+"saved_models/self_supervised/"+file_name
+  PATH = file_name_after_checkpoint if from_checkpoint else save_model_path+"saved_models/self_supervised/"+file_name
 
   print('END--',PATH)
 
@@ -264,5 +266,3 @@ schedule =[{"method":"naive_combination","num_epochs":3}]
 
 for kwargs in schedule:
   self_train(**kwargs)
-
-
