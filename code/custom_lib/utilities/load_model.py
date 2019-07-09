@@ -131,7 +131,7 @@ class Load_Model(object):
         start_i = from_checkpoint.index('_epochs')
         end_i =from_checkpoint.index('_batch')
         initial_epoch = int(from_checkpoint[start_i+7:end_i])
-        self.kwargs["Common"]["batch_size"]= initial_epoch +self.kwargs["Common"]["num_epochs"]
+        self.kwargs["Common"]["num_epochs"]= initial_epoch +self.kwargs["Common"]["num_epochs"]
         '''
         #Batch
         start_i = from_checkpoint.index('batch_size')
