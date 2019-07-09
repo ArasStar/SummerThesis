@@ -22,10 +22,14 @@ import sys
 print("hooop")
 
 saved_model_PATH="/vol/bitbucket/ay1218/"
+
 root_PATH_dataset = "/vol/gpudata/ay1218/"
+
 root_PATH = "/homes/ay1218/Desktop/"
 #root_PATH = "/home/aras/Desktop/"
+
 #root_PATH_dataset = root_PATH
+#saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
@@ -40,7 +44,7 @@ else:
     print("CUDA didn't work")
     device = torch.device('cpu')
 
-def transfer_learning(  num_epochs=3, resize= 320, batch_size=8, pre_trained_PATH="", root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH):
+def transfer_learning(  num_epochs=3, resize= 320, batch_size=8, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH):
 
     learning_rate=0.0001
     #after patch transformation
@@ -52,29 +56,60 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=8, pre_trained_PAT
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH +"SummerThesis/code/custom_lib/chexpert_load/train.csv",transform,
                                                                     batch_size,labels_path = labels_path,root_dir= root_PATH_dataset )
 
-
     model=models.densenet121(num_classes = 5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    criterion =nn.BCEWithLogitsLoss(pos_weight=chexpert_load.load_posw()).to(device=device)
+    plot_loss = []
 
     if pre_trained_PATH:
         print("tranfering the weights")
         checkpoint = torch.load(pre_trained_PATH)
         model.load_state_dict(checkpoint['model_state_dict'],strict=False) # just features get downloaded classifier stays
+
         splited = pre_trained_PATH.split('/')
-        saved_model_PATH = saved_model_PATH+"saved_models/trasfer_learning/"+splited[-1][:-4]
+        file_name ="TL_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"---" + splited[-1][:-4]
+
+        saved_model_PATH = saved_model_PATH +"saved_models/transfer_learning/"+file_name
         if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
-        file_path = saved_model_PATH + "/TL_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"---" + splited[-1]
+        file_path = saved_model_PATH +"/"+file_name+".tar"
+
+    elif from_checkpoint:
+        print("from the checkpoint")
+        checkpoint = torch.load(from_checkpoint)
+        model.load_state_dict(checkpoint['model_state_dict'], strict=True) # just features get downloaded classifier stays
+        plot_loss = checkpoint['loss']
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        for state in optimizer.state.values():
+          for k, v in state.items():
+            if torch.is_tensor(v):
+                state[k] = v.to(device=device)
+
+        start_i = from_checkpoint.index('batch')
+        end_i =from_checkpoint.index('_learning_rate')
+        batch_size = int(from_checkpoint[start_i+5:end_i])
+
+
+        start_i = from_checkpoint.index('epoch')
+        end_i =from_checkpoint.index('_batch')
+        initial_epoch = int(from_checkpoint[start_i+5:end_i])
+        file_name_after_checkpoint = from_checkpoint.replace(from_checkpoint[start_i:end_i],'epoch'+ str( initial_epoch + num_epochs))
+
+        splited = file_name_after_checkpoint.split('/')
+        saved_model_PATH = saved_model_PATH+"saved_models/transfer_learning/"+splited[-1][:-4]
+        if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
+
+        file_path = saved_model_PATH + '/' +  splited[-1]
+
     else:
         print("training from scratch")
-        saved_model_PATH = saved_model_PATH +"saved_models/transfer_learning/from_scratch__epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)
+        saved_model_PATH = saved_model_PATH +"saved_models/transfer_learning/from_scratch_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)
 
         if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
         splited = saved_model_PATH.split('/')[-1]
-        file_path = saved_model_PATH + splited + ".tar"
+        file_path = saved_model_PATH + '/' + splited + ".tar"
 
     model=model.to(device=device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    criterion =nn.BCEWithLogitsLoss(pos_weight=chexpert_load.load_posw()).to(device=device)
-    plot_loss = []
+
 
     currentDT = datetime.datetime.now()
 
@@ -166,12 +201,11 @@ schedule=[  {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_
             {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/jigsaw_epoch3_batch16_learning_rate0.0001_perm_set_size300_grid_size225_patch_size64.tar"},
             {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/relative_position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
 
-schedule=[  {"transfer_learning":0},
-            {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/naive_combination_epoch12_batch16_learning_rate0.0001_split3.0_perm_set_size300_grid_size225_patch_size64.tar"}]
+schedule=[  {"transfer_learning":0}]
 
 
-schedule=[
-            { "batch_size": 8}]
+schedule=[ { "batch_size": 8},
+            {"from_checkpoint":"/vol/bitbucket/ay1218/saved_models/transfer_learning/from_scratch_epoch3_batch8_learning_rate0.0001/from_scratch_epoch3_batch8_learning_rate0.0001.tar"}]
 
 for kwargs in schedule:
     transfer_learning(**kwargs)

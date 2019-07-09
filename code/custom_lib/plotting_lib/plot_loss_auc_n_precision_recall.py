@@ -8,24 +8,27 @@ import numpy as np
 
 class Curves_AUC_PrecionnRecall(object):
 
-    def __init__(self, chexpert_load,chexpert_dataset, probs, acts,model_name,root_PATH ):
+    def __init__(self, chexpert_load=None, chexpert_dataset=None, probs=None, acts=None, model_name=None, root_PATH=None,mode="" ):
 
       self.root_PATH = root_PATH
       self.model_name = model_name
-      self.list_classes = chexpert_dataset.list_classes
 
-      self.auc_scores = {chexpert_dataset.list_classes[i]: roc_auc_score(acts[:,i],probs[:,i]) for i in range(len(chexpert_dataset.list_classes))}
-      self.chexpert_load = chexpert_load
 
-      df_probs = pd.DataFrame(probs, columns=[cl+"probs" for cl in self.list_classes])
-      df_acts = pd.DataFrame(acts, columns=[cl+"acts" for cl in self.list_classes])
 
-      probs_n_act_df = chexpert_dataset.observations_frame[['patient','study']]
-      probs_n_act_df = probs_n_act_df.join(df_probs)
-      probs_n_act_df = probs_n_act_df.join(df_acts)
+      if mode != "just_plot_loss":
+          self.chexpert_load = chexpert_load
+          self.list_classes = chexpert_dataset.list_classes
+          self.auc_scores = {chexpert_dataset.list_classes[i]: roc_auc_score(acts[:,i],probs[:,i]) for i in range(len(chexpert_dataset.list_classes))}
 
-      self.acts = probs_n_act_df.groupby(['patient','study'])[[cl+"acts" for cl in self.list_classes]].max().values
-      self.probs = probs_n_act_df.groupby(['patient','study'])[[cl+"probs" for cl in self.list_classes]].mean().values
+          df_probs = pd.DataFrame(probs, columns=[cl+"probs" for cl in self.list_classes])
+          df_acts = pd.DataFrame(acts, columns=[cl+"acts" for cl in self.list_classes])
+
+          probs_n_act_df = chexpert_dataset.observations_frame[['patient','study']]
+          probs_n_act_df = probs_n_act_df.join(df_probs)
+          probs_n_act_df = probs_n_act_df.join(df_acts)
+
+          self.acts = probs_n_act_df.groupby(['patient','study'])[[cl+"acts" for cl in self.list_classes]].max().values
+          self.probs = probs_n_act_df.groupby(['patient','study'])[[cl+"probs" for cl in self.list_classes]].mean().values
 
 
 
@@ -85,7 +88,7 @@ class Curves_AUC_PrecionnRecall(object):
         #print("recall", recall)
         #print("FPR", false_positive_rate)
 
-      plt.savefig("/"+self.root_PATH+"saved_AUC_and_P_R"+ self.model_name+ ".pdf")
+      plt.savefig(self.root_PATH+"/saved_AUC_and_P_R"+ self.model_name+ ".pdf")
 
 
     def auc_difference_print(self):
@@ -156,7 +159,9 @@ class Curves_AUC_PrecionnRecall(object):
         plt.plot(x,plot_loss)
         plt.xlabel('iteratons')
         plt.ylabel('loss')
-        plt.savefig("/"+self.root_PATH+'plot_loss_'+self.model_name+ '.png')
+        plt.savefig(self.root_PATH+'/plot_loss_'+self.model_name+ '.png')
+
+
 
 
 

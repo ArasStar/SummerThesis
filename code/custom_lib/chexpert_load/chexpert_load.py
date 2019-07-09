@@ -1,7 +1,7 @@
 import os#for CUDA tracking
 import torch
 import pandas as pd
-from skimage.io import imread
+from PIL import Image
 #from skimage import io
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
@@ -14,6 +14,9 @@ import torchvision.models as models
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
+
+import datetime
+
 
 chexpert_auc_scores = {'Atelectasis':      0.858,
                            'Cardiomegaly':     0.854,
@@ -119,11 +122,10 @@ class CheXpertDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        #img_name = os.path.join(os.getcwd(),self.root_dir,self.observations_frame.iloc[idx, 0])
         img_name =  self.root_dir + self.observations_frame.loc[idx, ['Path']].values[0]
         #print("hoooop",img_name)
-        image = imread(img_name)
-        image = transforms.ToPILImage()(image)
+        image = Image.open(img_name)
+        #image = transforms.ToPILImage()(image)
 
         labels = self.labels[idx,:]
 

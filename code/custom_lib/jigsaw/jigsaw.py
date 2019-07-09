@@ -6,7 +6,7 @@ import matplotlib.patches as patches4rectangle
 
 
 class Jigsaw(object):
-    def __init__(self, image_batch, path_permutation_set, grid_crop_size=255, patch_crop_size=64, gpu=True, show=False,transform= None):
+    def __init__(self, image_batch,perm_set_size, path_permutation_set, grid_crop_size=255, patch_crop_size=64, gpu=True, show=False,transform= None):
 
         self.bs, _, self.h, self.w = image_batch.shape
         self.show = show  # print cropped images and show where they are 1 time for each batch
@@ -18,12 +18,11 @@ class Jigsaw(object):
         self.patch_crop_size = patch_crop_size
         assert (self.grid_patch_size > self.patch_crop_size), "patch crop size has to be smaller then grid patch size"
 
-
-
         self.device = torch.device('cuda') if gpu else torch.device('cpu')
+        assert(path_permutation_set.__contains__(str(perm_set_size))), "path file and perm set size not matching"
         self.permutation_set = torch.load(path_permutation_set, map_location=self.device)
         self.transform = transform
-        
+
     def __call__(self):
 
         patches = torch.Tensor()
@@ -35,14 +34,14 @@ class Jigsaw(object):
 
             if idx == 1 and self.show:
                 self.show_cropped_patches(image, shiftcol, shiftrow, permuted_patches, cord_patches, label)
-            
+
             if self.transform:
-                 permuted_patches = torch.stack([self.transform(x_i) 
+                 permuted_patches = torch.stack([self.transform(x_i)
                      for i, x_i in enumerate(torch.unbind(permuted_patches, dim=0))], dim=0)
-        
+
             patches = torch.cat((patches, permuted_patches))
             labels[idx] = label
-        
+
         labels = torch.from_numpy(labels).type(torch.FloatTensor)
         return patches, labels
 
@@ -51,7 +50,7 @@ class Jigsaw(object):
         grid, shiftcol, shiftrow = self.random_crop(image, self.grid_crop_size)
         patches, cord_patches = self.get_patches(grid)
         permuted_patches, label = self.permut(patches)
-        
+
         return permuted_patches, label, shiftcol, shiftrow, cord_patches
 
     def random_crop(self, image, cropsize):
@@ -76,13 +75,13 @@ class Jigsaw(object):
                 row_finit = row_start + self.grid_patch_size
                 col_start = 0 + self.grid_patch_size * j;
                 col_finit = col_start + self.grid_patch_size
-                
+
                 patches[patch_n,:, :], scol, srow = self.random_crop(grid[:, row_start:row_finit, col_start:col_finit],
-                                                                      self.patch_crop_size) 
+                                                                      self.patch_crop_size)
                 cord_patches.append((scol, srow))
                 patch_n = patch_n + 1
-        
-        return patches, cord_patches 
+
+        return patches, cord_patches
 
     def permut(self, patches):
         set_size, _ = self.permutation_set.shape  # Nx9
@@ -113,8 +112,8 @@ class Jigsaw(object):
                     linestyle='dashed')
             ax.plot([start_col + shift, start_col + shift], [start_row, start_row + self.grid_crop_size], color='r',
                     linestyle='dashed')
-        
-        fig.suptitle(F"grid size {self.grid_crop_size}, patch_size(green){self.patch_crop_size}")
+
+        fig.suptitle("grid size "+str(self.grid_crop_size)+", patch_size(green)"+str(self.patch_crop_size))
 
         # print(cord_patcstart_colstart_colhes)
         for idx, (srow, scol) in enumerate(cord_patches):
@@ -154,7 +153,7 @@ class Jigsaw(object):
             patch_show = transforms.ToPILImage()(permuted_patches[idx,:, :])
             ax2[i, j].imshow(patch_show, cmap='Greys_r')
             ax2[i, j].axis('off')
-        
+
         fig2.suptitle(str(perm_label))
 
         # Aligned Grid
@@ -178,12 +177,12 @@ class Jigsaw(object):
             ax3[i, j].imshow(patch_show, cmap='Greys_r')
             ax3[i, j].axis('off')
 
-        
+
         fig3.suptitle(str(np.arange(9)))
 
         plt.show()
 
-            
+
 class Basic_Head(torch.nn.Module):
     def __init__(self, D_in, D_out, gpu=True):
         """
@@ -194,20 +193,20 @@ class Basic_Head(torch.nn.Module):
         super(Basic_Head, self).__init__()
         self.device = torch.device('cuda:0') if gpu else torch.device('cpu')
         self.classifier = torch.nn.Linear(D_in*9,D_out).to(device = self.device)
-        
 
-    def forward(self, x):        
+
+    def forward(self, x):
         N,_ = x.shape
         # combining two representation (batch is [bs,ch,h,w])
-      
+
         def stack_tiles(tiles):
           tile_stacked = torch.Tensor().to(device = self.device)
           for tile in tiles:
             tile_stacked = torch.cat((tile_stacked,tile)).to(device = self.device)
           return tile_stacked
-          
+
         x = torch.stack([stack_tiles(x[idx:idx+9,:]) for idx in range(0,N,9)], dim=0).to(device=self.device)
-        
+
         #linear output with 8 outpts(directions)
         y_pred = self.classifier(x)
         return y_pred

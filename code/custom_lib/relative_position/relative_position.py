@@ -41,12 +41,12 @@ class Relative_Position(object):
                 patch1 = patch1.view(1, 1, h_patch, w_patch)
                 patch2 = patch2.view(1, 1, h_patch, w_patch)
             pair = torch.cat((patch1, patch2))
-            
+
             patches = torch.cat((patches, pair))
             #print("patches",patches.shape)
 
             labels[idx] = direction
-        
+
         labels = torch.from_numpy(labels)
         return patches, labels
 
@@ -61,8 +61,8 @@ class Relative_Position(object):
 
     def patch_from_image(self, image, drow, dcol):
 
-        i_row = self.i_row
-        i_col = self.i_col
+        i_row = int(self.i_row)
+        i_col = int(self.i_col)
         max = self.split - 1
 
         patch = torch.zeros(1, i_row + 1, i_col + 1)
@@ -167,13 +167,12 @@ class Basic_Head(torch.nn.Module):
         self.classifier = torch.nn.Linear(D_in*2,D_out).to(device = self.device)
 
     def forward(self, x):
-                
+
         N,_ = x.shape
         # combining two representation (batch is [bs,ch,h,w ])
         x = torch.stack([torch.cat((x[idx,:],x[idx+1,:]))
                      for idx in range(0,N,2)], dim=0).to(device = self.device)
-        
+
         #linear output with 8 outpts(directions)
         y_pred = self.classifier(x)
         return y_pred
-    
