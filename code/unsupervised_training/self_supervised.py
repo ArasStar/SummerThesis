@@ -63,7 +63,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
 
   #just ToTensor before patch
-  transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomVerticalFlip(), transforms.ToTensor()])
+  transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
 
   #after patch transformation
   transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
@@ -180,9 +180,9 @@ schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/se
 schedule=[{"method":"Relative_Position","num_epochs":3,"split":3.0}]
 schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/self_supervised/Relative_Position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
 
-schedule=[{"method":"Jigsaw","num_epochs":3},
-          {"method":"Relative_Position","num_epochs":3},
-          {"method":"naive_combination","combo":combo,"num_epochs":3}]
+schedule=[{"method":"Jigsaw","num_epochs":3,"show":True},
+          {"method":"Relative_Position","num_epochs":3,"show":True},
+          {"method":"naive_combination","combo":combo,"num_epochs":3,"show":True}]
 
 
 for kwargs in schedule:
