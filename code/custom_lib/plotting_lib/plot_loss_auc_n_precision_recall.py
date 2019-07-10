@@ -104,14 +104,20 @@ class Curves_AUC_PrecionnRecall(object):
       avg_chexpert_auc = sum(list(chexpert_auc_scores.values()))/len(chexpert_auc_scores.values())
       avg_auc          = sum(list(self.auc_scores.values()))/len(self.auc_scores.values())
 
-      #[print(f'{k: <{max_feat_len}}\t auc: {self.auc_scores[k]:.3}\t chexpert auc: {chexpert_auc_scores[k]:.3}\t difference:\
-      #{(chexpert_auc_scores[k]-self.auc_scores[k]):.3}') for k in self.list_classes]
-
+      #[print(f'{k: <{max_feat_len}}\t auc: {self.auc_scores[k]:.3}\t chexpert auc: {chexpert_auc_scores[k]:.3}\t difference:\ {(chexpert_auc_scores[k]-self.auc_scores[k]):.3}') for k in self.list_classes]
       #print(f'\nAverage auc: {avg_auc:.3} \t CheXpert average auc {avg_chexpert_auc:.3}\t Difference {(avg_chexpert_auc-avg_auc):.3}')
-      print("auc_model",self.auc_scores)
-      print("auc_chexpert",chexpert_auc_scores)
-      print("AVG_auc_model",avg_auc)
-      print("AVG_auc_chexpert",avg_chexpert_auc)
+
+      printlist =['{0: <{1}}\t auc: {2:.3}\t chexpert auc: {3:.3}\t difference: {4:.3}'.format( k, max_feat_len, self.auc_scores[k], chexpert_auc_scores[k] ,chexpert_auc_scores[k]-self.auc_scores[k]) for k in self.list_classes]
+      for pr in printlist:
+          print(pr)
+      print('\nAverage auc: {0:.3} \t CheXpert average auc {1:.3}\t Difference {2:.3}\n'.format(avg_auc,avg_chexpert_auc,avg_chexpert_auc-avg_auc))
+      #line_new = '{:>12}  {:>12}  {:>12}'.format(word[0], word[1], word[2])
+
+
+      #print("auc_model",self.auc_scores)
+      #print("auc_chexpert",chexpert_auc_scores)
+      #print("AVG_auc_model",avg_auc)
+      #print("AVG_auc_chexpert",avg_chexpert_auc)
       #print(auc_scores)
 
 

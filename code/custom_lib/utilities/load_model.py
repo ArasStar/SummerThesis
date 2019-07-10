@@ -2,9 +2,6 @@
 import os
 import torch
 
-
-
-
 import relative_position
 import jigsaw
 
@@ -26,7 +23,7 @@ class Load_Model(object):
         self.optimizer= optimizer
         self.model= model
         self.head = None
-        self.out_D ={"Relative_Position":8 ,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
+        self.out_D = "" if method=="TL" else {"Relative_Position":8 ,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
         self.use_cuda = use_cuda
 
         if use_cuda and torch.cuda.is_available():
@@ -38,12 +35,20 @@ class Load_Model(object):
 
     def __call__(self):
 
-        if self.from_checkpoint:
+        if self.method == "TL":
+
+            if self.pre_trained:
+                file_name = self.load_from_Pretrained()
+
+            elif self.from_checkpoint:
+                file_name = self.load_from_TL_checkpoint()
+
+            return file_name
+
+
+        elif self.from_checkpoint:
             self.load_from_checkpoint()
             file_name = self.get_file_name()
-
-        elif self.pre_trained:
-            pass
 
         else:
             file_name = self.get_file_name()
@@ -131,14 +136,15 @@ class Load_Model(object):
         start_i = from_checkpoint.index('_epochs')
         end_i =from_checkpoint.index('_batch')
         initial_epoch = int(from_checkpoint[start_i+7:end_i])
-        self.kwargs["Common"]["num_epochs"]= initial_epoch +self.kwargs["Common"]["num_epochs"]
-        '''
+        self.kwargs["Common"]["num_epochs"]= initial_epoch + self.kwargs["Common"]["num_epochs"]
+
         #Batch
         start_i = from_checkpoint.index('batch_size')
         end_i =from_checkpoint.index('_learning_rate')
         batch_size = int(from_checkpoint[start_i+10:end_i])
         self.kwargs["Common"]["batch_size"]= batch
-        '''
+
+
         if from_checkpoint.__contains__("split"):
             #split
             start_i = from_checkpoint.index('split')
@@ -164,3 +170,75 @@ class Load_Model(object):
             self.kwargs["Jigsaw"]["patch_crop_size"] = patch_crop_size
 
             self.kwargs["Jigsaw"]["path_permutation_set"].replace(str(old_perm)+".pt",str(perm_set_size)+".pt")
+
+    def load_from_Pretrained(self):
+
+        print("tranfering the weights")
+        checkpoint = torch.load(self.pre_trained)
+        self.model.load_state_dict(checkpoint['model_state_dict'],strict=False) # just features get downloaded classifier stays
+
+        splited = self.pre_trained.split('/')[-1]
+        file_name ="TL_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"--" + splited
+        return file_name
+
+    def load_from_TL_checkpoint(self):
+
+        print("from the TL_checkpoint")
+        checkpoint = torch.load(self.from_checkpoint)
+        self.model.load_state_dict(checkpoint['model_state_dict'], strict=True) # just features get downloaded classifier stays
+        self.plot_loss = checkpoint['loss']
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        for state in self.optimizer.state.values():
+          for k, v in state.items():
+            if torch.is_tensor(v):
+                state[k] = v.to(device=self.device)
+
+        file_name = self.from_checkpoint.split("/")[-1]
+
+        start_i = file_name.index('batch')
+        end_i =file_name.index('_learning_rate')
+        current_batch_size = int(file_name[start_i+5:end_i])
+        self.kwargs["Common"]["batch_size"] = current_batch_size
+
+
+        start_i = file_name.index('epoch')
+        end_i =file_name.index('_batch')
+        initial_epoch = int(file_name[start_i+5:end_i])
+        file_name = file_name.replace(file_name[start_i:end_i],'epoch'+ str( initial_epoch + self.kwargs["Common"]["num_epochs"]))
+
+        return file_name
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #baby yelling in my ear

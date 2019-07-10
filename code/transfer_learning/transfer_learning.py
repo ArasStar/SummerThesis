@@ -5,8 +5,7 @@ import os#for CUDA tracking
 #from __future__ import print_function, division
 import torch
 import pandas as pd
-from skimage.io import imread
-#from skimage import io
+
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -22,19 +21,29 @@ import sys
 print("hooop")
 
 saved_model_PATH="/vol/bitbucket/ay1218/"
-
 root_PATH_dataset = "/vol/gpudata/ay1218/"
+root_PATH_dataset = saved_model_PATH
+
 
 root_PATH = "/homes/ay1218/Desktop/"
-#root_PATH = "/home/aras/Desktop/"
 
+#comment out below for local comp
+
+#root_PATH = "/home/aras/Desktop/"
 #root_PATH_dataset = root_PATH
 #saved_model_PATH=root_PATH
 
-sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
-import plot_loss_auc_n_precision_recall
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/relative_position')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/jigsaw')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
+
 import chexpert_load
+import load_model
+import plot_loss_auc_n_precision_recall
+
+
 
 use_cuda = True
 if use_cuda and torch.cuda.is_available():
@@ -44,7 +53,8 @@ else:
     print("CUDA didn't work")
     device = torch.device('cpu')
 
-def transfer_learning(  num_epochs=3, resize= 320, batch_size=8, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH):
+def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH,
+                                                        root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH):
 
     learning_rate=0.0001
     #after patch transformation
@@ -61,60 +71,33 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=8, pre_trained_PAT
     criterion =nn.BCEWithLogitsLoss(pos_weight=chexpert_load.load_posw()).to(device=device)
     plot_loss = []
 
-    if pre_trained_PATH:
-        print("tranfering the weights")
-        checkpoint = torch.load(pre_trained_PATH)
-        model.load_state_dict(checkpoint['model_state_dict'],strict=False) # just features get downloaded classifier stays
-
-        splited = pre_trained_PATH.split('/')
-        file_name ="TL_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"---" + splited[-1][:-4]
-
-        saved_model_PATH = saved_model_PATH +"saved_models/transfer_learning/"+file_name
-        if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
-        file_path = saved_model_PATH +"/"+file_name+".tar"
-
-    elif from_checkpoint:
-        print("from the checkpoint")
-        checkpoint = torch.load(from_checkpoint)
-        model.load_state_dict(checkpoint['model_state_dict'], strict=True) # just features get downloaded classifier stays
-        plot_loss = checkpoint['loss']
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        for state in optimizer.state.values():
-          for k, v in state.items():
-            if torch.is_tensor(v):
-                state[k] = v.to(device=device)
-
-        start_i = from_checkpoint.index('batch')
-        end_i =from_checkpoint.index('_learning_rate')
-        batch_size = int(from_checkpoint[start_i+5:end_i])
+    kwarg_Common ={"num_epochs":num_epochs,"learning_rate":learning_rate,"batch_size":batch_size}
+    kwargs={"Common":kwarg_Common}
 
 
-        start_i = from_checkpoint.index('epoch')
-        end_i =from_checkpoint.index('_batch')
-        initial_epoch = int(from_checkpoint[start_i+5:end_i])
-        file_name_after_checkpoint = from_checkpoint.replace(from_checkpoint[start_i:end_i],'epoch'+ str( initial_epoch + num_epochs))
+    if pre_trained_PATH :
+        loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
+        file_name  = loader()
 
-        splited = file_name_after_checkpoint.split('/')
-        saved_model_PATH = saved_model_PATH+"saved_models/transfer_learning/"+splited[-1][:-4]
-        if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
 
-        file_path = saved_model_PATH + '/' +  splited[-1]
+    elif from_checkpoint :
+        loader = load_model.Load_Model(method="TL",from_checkpoint = from_checkpoint, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
+        file_name  = loader()
 
     else:
         print("training from scratch")
-        saved_model_PATH = saved_model_PATH +"saved_models/transfer_learning/from_scratch_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)
+        file_name = "from_scratch_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+".tar"
 
-        if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
-        splited = saved_model_PATH.split('/')[-1]
-        file_path = saved_model_PATH + '/' + splited + ".tar"
+    saved_model_PATH = saved_model_PATH+"saved_models/transfer_learning/"+file_name[:-4]
+    if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
 
-    model=model.to(device=device)
 
 
     currentDT = datetime.datetime.now()
+    model=model.to(device=device)
 
     print("started training")
-    print('START--',"TL_"+file_path.split("/")[-1] )
+    print('START--',file_name )
 
     model.train()
     for epoch in range(num_epochs):
@@ -145,13 +128,12 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=8, pre_trained_PAT
             break
         break
 
-    print('training done')
 
     aftertDT = datetime.datetime.now()
-    c=aftertDT-currentDT
+    c = aftertDT - currentDT
     mins,sec = divmod(c.days * 86400 + c.seconds, 60)
     print(mins,"mins ", sec,"secs")
-    print('END--',"TL_"+file_path.split("/")[-1])
+    print('END--',"TL_"+file_name)
 
 
 
@@ -184,16 +166,15 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=8, pre_trained_PAT
             acts = labels.cpu().numpy()  if acts.size ==0 else np.vstack((acts,labels.cpu().numpy()))
 
     # SAVING PLOTS and models
-    curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(chexpert_load,cheXpert_valid_dataset, probs, acts, model_name="TL_"+ file_path.split("/")[-2],root_PATH= saved_model_PATH)
+    curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(chexpert_load,cheXpert_valid_dataset, probs, acts, model_name= file_name,root_PATH= saved_model_PATH)
     curves()
     curves.plot_loss(plot_loss)
+    PATH =  saved_model_PATH+"/"+file_name
 
-    print('file_path', file_path)
     torch.save({'epoch':  num_epochs ,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-                'loss':plot_loss}, file_path)
-    print("finished eval , saved model and plots")
+                'loss':plot_loss}, PATH)
     curves.auc_difference_print()
 
 #FINIIIIIISH
@@ -204,8 +185,9 @@ schedule=[  {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_
 schedule=[  {"transfer_learning":0}]
 
 
-schedule=[ { "batch_size": 8},
-            {"from_checkpoint":"/vol/bitbucket/ay1218/saved_models/transfer_learning/from_scratch_epoch3_batch8_learning_rate0.0001/from_scratch_epoch3_batch8_learning_rate0.0001.tar"}]
-
+schedule=[  { "batch_size": 8},
+            { "batch_size": 16},
+            { "from_checkpoint":"/vol/bitbucket/ay1218/saved_models/transfer_learning/from_scratch_epoch3_batch8_learning_rate0.0001/from_scratch_epoch3_batch8_learning_rate0.0001.tar"},
+            { "from_checkpoint":"/vol/bitbucket/ay1218/saved_models/transfer_learning/from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 for kwargs in schedule:
     transfer_learning(**kwargs)
