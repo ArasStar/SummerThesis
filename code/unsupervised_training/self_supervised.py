@@ -27,10 +27,12 @@ root_PATH_dataset = saved_model_PATH
 
 
 root_PATH = "/homes/ay1218/Desktop/"
-#root_PATH = "/home/aras/Desktop/"
 
-#root_PATH_dataset = root_PATH
-#saved_model_PATH=root_PATH
+#coomment out  below for local comp
+root_PATH = "/home/aras/Desktop/"
+
+root_PATH_dataset = root_PATH
+saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities')
