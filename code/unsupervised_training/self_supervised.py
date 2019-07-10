@@ -27,10 +27,12 @@ root_PATH_dataset = saved_model_PATH
 
 
 root_PATH = "/homes/ay1218/Desktop/"
-#root_PATH = "/home/aras/Desktop/"
 
-#root_PATH_dataset = root_PATH
-#saved_model_PATH=root_PATH
+#coomment out  below for local comp
+root_PATH = "/home/aras/Desktop/"
+
+root_PATH_dataset = root_PATH
+saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities')
@@ -63,7 +65,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
 
   #just ToTensor before patch
-  transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomVerticalFlip(), transforms.ToTensor()])
+  transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
 
   #after patch transformation
   transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
