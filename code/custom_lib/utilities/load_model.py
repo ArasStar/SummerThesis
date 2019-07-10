@@ -142,7 +142,7 @@ class Load_Model(object):
         start_i = from_checkpoint.index('batch_size')
         end_i =from_checkpoint.index('_learning_rate')
         batch_size = int(from_checkpoint[start_i+10:end_i])
-        self.kwargs["Common"]["batch_size"]= batch
+        self.kwargs["Common"]["batch_size"]= batch_size
 
 
         if from_checkpoint.__contains__("split"):
