@@ -53,7 +53,6 @@ class Validation(object):
         curves()
         curves.plot_loss(self.plot_loss)
         curves.auc_difference_print()
-        print("HULOOOOOOOOOOOOOOOOOOOO")
 
 
 

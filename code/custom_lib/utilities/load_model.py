@@ -183,7 +183,7 @@ class Load_Model(object):
 
     def load_from_TL_checkpoint(self):
 
-        print("from the TL_checkpoint")
+        print("from the checkpoint")
         checkpoint = torch.load(self.from_checkpoint)
         self.model.load_state_dict(checkpoint['model_state_dict'], strict=True) # just features get downloaded classifier stays
         self.plot_loss = checkpoint['loss']

@@ -89,6 +89,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train.csv",
                                                                   transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset)
 
+
   model=model.to(device=device)
   model.train()
   currentDT = datetime.datetime.now()
@@ -127,6 +128,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
         if show:
           print("showa giriyooor",show)
+          i = 100000000
 
 
 
@@ -140,6 +142,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
   print('END--',file_name)
 
+  '''
   PATH =  saved_model_PATH+"/"+file_name
   head_state_list = [head["head"].state_dict()  for head in head_arch]
   head_name_list = [head["head_name"]  for head in head_arch]
@@ -154,6 +157,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   curves.plot_loss(plot_loss=plot_loss)
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
+  '''
 
 
 '''
@@ -182,9 +186,9 @@ schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/se
 schedule=[{"method":"Relative_Position","num_epochs":3,"split":3.0}]
 schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/self_supervised/Relative_Position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
 
-schedule=[{"method":"Jigsaw","num_epochs":3,"show":True},
-          {"method":"Relative_Position","num_epochs":3,"show":True},
-          {"method":"naive_combination","combo":combo,"num_epochs":3,"show":True}]
+schedule=[{"method":"Jigsaw","num_epochs":3},
+          {"method":"Relative_Position","num_epochs":3},
+          {"method":"naive_combination","combo":combo,"num_epochs":3}]
 
 
 for kwargs in schedule:
