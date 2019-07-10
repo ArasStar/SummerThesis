@@ -124,8 +124,6 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
             if i % 200 == 0:
                 plot_loss.append(loss)
             #DELETEEEEE
-            break
-        break
 
     aftertDT = datetime.datetime.now()
     c = aftertDT - currentDT

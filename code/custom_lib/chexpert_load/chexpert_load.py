@@ -88,18 +88,15 @@ class CheXpertDataset(Dataset):
         if labels_path:
             self.labels = torch.load(labels_path).type(torch.FloatTensor)
 
-            if list_classes:
-                list_idx = [ np.where(np.array(self.list_classes) == feature)[0][0] for feature in list_classes]
+            if self.list_classes:
+                list_idx = [ np.where(np.array(['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']) == feature)[0][0] for feature in self.list_classes]
                 self.labels = self.labels.index_select(1,torch.tensor(list_idx))
 
-            self.list_classes=list_classes
 
         elif csv_file.__contains__("valid"):
             self.labels = torch.from_numpy(self.observations_frame.loc[:, self.list_classes].values).type(torch.FloatTensor)
-
-
         else:
-            self.list_classes = list_classes if list_classes else self.list_classes
+
             u_one_features = ['Atelectasis', 'Edema']; u_zero_features = ['Cardiomegaly', 'Consolidation', 'Pleural Effusion']
             u_one_features = [value for value in u_one_features if value in self.list_classes]
             u_zero_features = [value for value in u_zero_features if value in self.list_classes]
@@ -113,6 +110,8 @@ class CheXpertDataset(Dataset):
             self.labels = labels
             #torch.save(self.labels,"/home/aras/Desktop/SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt")
 
+
+        self.observations_frame[self.list_classes] = pd.DataFrame(self.labels.numpy(), columns= self.list_classes)
        # df_labels = pd.DataFrame(labels.numpy(),columns=[cl+"_feat" for cl in self.list_classes])
        #self.observations_frame.join(df_labels)
 
@@ -122,12 +121,11 @@ class CheXpertDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        img_name =  self.root_dir + self.observations_frame.loc[idx, ['Path']].values[0]
-        #print("hoooop",img_name)
+        instance = self.observations_frame.loc[idx,["Path"]+self.list_classes]
+        img_name =  self.root_dir + instance.loc[ 'Path']
         image = Image.open(img_name)
         #image = transforms.ToPILImage()(image)
-
-        labels = self.labels[idx,:]
+        labels = torch.from_numpy(instance[self.list_classes].values.astype(np.float32))
 
         # RETURNING IMAGE AND LABEL SEPERATELY FOR TORCH TRANSFORM LIB
         if self.transform:
