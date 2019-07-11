@@ -33,9 +33,11 @@ root_PATH = "/home/aras/Desktop/"
 root_PATH_dataset = root_PATH
 saved_model_PATH=root_PATH
 
-sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load');sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities')
-sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/relative_position');sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/jigsaw')
-sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/relative_position')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/jigsaw')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/plotting_lib')
 
 import chexpert_load
 import load_model
@@ -74,12 +76,11 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
 
     if pre_trained_PATH :
         loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
-        file_name  = loader()
-
+        file_name , optimizer  = loader()
 
     elif from_checkpoint :
         loader = load_model.Load_Model(method="TL",from_checkpoint = from_checkpoint, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
-        file_name  = loader()
+        file_name , optimizer  = loader()
 
     else:
         print("training from scratch")
@@ -125,6 +126,8 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
             if i % 200 == 0:
                 plot_loss.append(loss)
             #DELETEEEEE
+            break
+        break
 
     aftertDT = datetime.datetime.now()
     c = aftertDT - currentDT
@@ -152,5 +155,6 @@ schedule=[  {"transfer_learning":0}]
 
 schedule=[  { "batch_size": 8},
             { "from_checkpoint":"/home/aras/Desktop/saved_models/transfer_learning/from_scratch_epoch3_batch8_learning_rate0.0001/from_scratch_epoch3_batch8_learning_rate0.0001.tar"}    ]
+
 for kwargs in schedule:
     transfer_learning(**kwargs)

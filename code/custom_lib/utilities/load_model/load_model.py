@@ -20,9 +20,9 @@ class Load_Model(object):
                                 "Relative_Position":["_split"]}
         self.combo = combo
         self.kwargs = kwargs
-        self.optimizer= optimizer
         self.model= model
         self.head = None
+        self.optimizer_chex = None
         self.out_D = "" if method=="TL" else {"Relative_Position":8 ,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
         self.use_cuda = use_cuda
 
@@ -43,7 +43,7 @@ class Load_Model(object):
             elif self.from_checkpoint:
                 file_name = self.load_from_TL_checkpoint()
 
-            return file_name
+            return file_name , self.optimizer_chex
 
 
         elif self.from_checkpoint:
@@ -83,7 +83,6 @@ class Load_Model(object):
     def set_head(self):
         if self.combo ==[]: print("PROBLEM gethead NAIVE COMB")
 
-        n_heads = len(self.combo)
         heads = []
         for h in self.combo:
 
@@ -92,7 +91,7 @@ class Load_Model(object):
           to_patch = getattr(head_module,h)
           kwarg =self.kwargs[h]
 
-          heads.append({"head":method_head, "patch_func":to_patch, "args": kwarg, "head_name":h})
+          heads.append({"head":method_head, "patch_func":to_patch, "args": kwarg, "optimizer": torch.optim.RMSprop(self.model.parameters(), lr=self.kwargs['Common']["learning_rate"]) ,"head_name":h})
 
         self.head = heads
 
@@ -106,26 +105,29 @@ class Load_Model(object):
 
         else:
           self.method = from_checkpoint[from_checkpoint.index("_supervised/")+12:from_checkpoint.index('_num_epochs')]
-          self.combo = [method]
+          self.combo = [self.method]
 
         #loading model
         checkpoint = torch.load(self.from_checkpoint, map_location = self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'], strict=False)#loading features
         self.plot_loss = checkpoint['loss']
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
-        for state in self.optimizer.state.values():
-          for k, v in state.items():
-            if torch.is_tensor(v):
-                state[k] = v.to(device=self.device)
-
 
         self.update_params_from_checkpoint()
         self.set_head()
+
         head_dict = checkpoint["model_head"] # dict headname: headstateDict
+        opt_dict = checkpoint['optimizer_state_dict']
+        
         for head in self.head:
+
             h_name = head["head_name"]
             head["head"].load_state_dict(head_dict[h_name])
+            head["optimizer"].load_state_dict(opt_dict[h_name])
+            
+            for state in head['optimizer'].state.values():
+                for k, v in state.items():
+                    if torch.is_tensor(v):
+                        state[k] = v.to(device=self.device)
 
 
     def update_params_from_checkpoint(self):
@@ -176,10 +178,11 @@ class Load_Model(object):
         print("tranfering the weights")
         checkpoint = torch.load(self.pre_trained)
         self.model.load_state_dict(checkpoint['model_state_dict'],strict=False) # just features get downloaded classifier stays
+        self.optimizer_chex = torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
 
         splited = self.pre_trained.split('/')[-1]
         file_name ="TL_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"--" + splited
-        return file_name
+        return file_name 
 
     def load_from_TL_checkpoint(self):
 
@@ -187,11 +190,12 @@ class Load_Model(object):
         checkpoint = torch.load(self.from_checkpoint)
         self.model.load_state_dict(checkpoint['model_state_dict'], strict=True) # just features get downloaded classifier stays
         self.plot_loss = checkpoint['loss']
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        for state in self.optimizer.state.values():
-          for k, v in state.items():
-            if torch.is_tensor(v):
-                state[k] = v.to(device=self.device)
+        self.optimizer_chex= torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate']).load_state_dict(checkpoint['optimizer_state_dict'])
+        
+        for state in self.optimizer_chex.state.values():
+            for k, v in state.items():
+                if torch.is_tensor(v):
+                    state[k] = v.to(device=self.device)
 
         file_name = self.from_checkpoint.split("/")[-1]
 
@@ -207,20 +211,6 @@ class Load_Model(object):
         file_name = file_name.replace(file_name[start_i:end_i],'epoch'+ str( initial_epoch + self.kwargs["Common"]["num_epochs"]))
 
         return file_name
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -30,15 +30,14 @@ root_PATH = "/homes/ay1218/Desktop/"
 
 #coomment out  below for local comp
 root_PATH = "/home/aras/Desktop/"
-
 root_PATH_dataset = root_PATH
 saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
-sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities')
-sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/relative_position')
-sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/jigsaw')
-sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/plotting_lib')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/relative_position')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/jigsaw')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/plotting_lib')
 
 import chexpert_load
 import load_model
@@ -53,16 +52,16 @@ else:
     device = torch.device('cpu')
 
 
-def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=300 ,from_checkpoint=None ,
+def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
  combo=[], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
 
   model = models.densenet121()
-  optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+  #optimizer =torch.optim.RMSprop(model.parameters(), lr=learning_rate)
   criterion = torch.nn.CrossEntropyLoss().to(device = device)
   plot_loss = []
 
   #Setting permuation_set
-  PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
+  PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
 
   #just ToTensor before patch
   transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
@@ -71,14 +70,15 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+  
   #constant vars
   kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
   kwarg_Relative_Position = {"split":split,"transform":transform_after_patching,"show":show}
-  kwarg_Common ={"num_epochs":num_epochs,"learning_rate":learning_rate,"batch_size":batch_size}
-  kwargs={"Common":kwarg_Common,"Jigsaw": kwarg_Jigsaw,"Relative_Position":kwarg_Relative_Position}
+  kwarg_Common ={"num_epochs":num_epochs,"learning_rate":learning_rate, "batch_size":batch_size}
+  kwargs={"Common": kwarg_Common,"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position}
 
-  loader = load_model.Load_Model(method=method, combo=combo, from_checkpoint =from_checkpoint, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
-  file_name , head_arch = loader()
+  loader = load_model.Load_Model(method=method, combo=combo, from_checkpoint =from_checkpoint, kwargs=kwargs, model=model, plot_loss=plot_loss  )
+  file_name , head_arch  = loader()
   n_heads= len(head_arch)
 
   saved_model_PATH = saved_model_PATH+  "saved_models/self_supervised/"+ file_name[:-4]
@@ -100,10 +100,9 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
         head_dict = head_arch[i % n_heads]
         model.classifier = head_dict["head"]
         patcher = head_dict["patch_func"](image_batch= images,**head_dict["args"])
-
+        optimizer= head_dict['optimizer']
 
         patches, labels =  patcher()
-
         patches = patches.to(device = device, dtype = torch.float32)
         labels = labels.to(device=device, dtype=torch.long)
 
@@ -114,7 +113,6 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
         optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
         loss.backward()                                   # Backward pass: compute the weight
         optimizer.step()                                  # Optimizer: update the weights of hidden nodes
-
 
         if i%200 == 0:
           plot_loss.append(loss)
@@ -129,6 +127,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
         if show:
           print("showa giriyooor",show)
           i = 100000000
+      
 
 
 
@@ -142,22 +141,23 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
   print('END--',file_name)
 
-  '''
   PATH =  saved_model_PATH+"/"+file_name
-  head_state_list = [head["head"].state_dict()  for head in head_arch]
+
   head_name_list = [head["head_name"]  for head in head_arch]
+  head_state_list = [head["head"].state_dict()  for head in head_arch]
+  optimizer_state_list=[head['optimizer'].state_dict()  for head in head_arch]
+
   torch.save({
-             'epoch': initial_epoch + num_epochs if from_checkpoint else  num_epochs ,
+             'epoch': kwarg_Common["num_epochs"] ,
              'model_state_dict': model.state_dict(),
              'model_head': dict(zip(head_name_list,head_state_list)),#saving name of the method and the head state
-             'optimizer_state_dict': optimizer.state_dict(),
+             'optimizer_state_dict': dict(zip(head_name_list, optimizer_state_list)),
              'loss':plot_loss}, PATH)
 
   curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(model_name=file_name,root_PATH= saved_model_PATH,mode="just_plot_loss")
   curves.plot_loss(plot_loss=plot_loss)
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
-  '''
 
 
 '''
@@ -186,9 +186,14 @@ schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/se
 schedule=[{"method":"Relative_Position","num_epochs":3,"split":3.0}]
 schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/self_supervised/Relative_Position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
 
+
+p = saved_model_PATH +'saved_models/self_supervised/'
 schedule=[{"method":"Jigsaw","num_epochs":3},
           {"method":"Relative_Position","num_epochs":3},
-          {"method":"naive_combination","combo":combo,"num_epochs":3}]
+          {"method":"naive_combination","combo":combo,"num_epochs":3},
+          {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size300_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size300_grid_crop_size225_patch_crop_size64.tar"}
+          ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
+          ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size300_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size300_grid_crop_size225_patch_crop_size64.tar"}]
 
 
 for kwargs in schedule:
