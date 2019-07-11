@@ -1,1 +1,0 @@
-generating permutation set
