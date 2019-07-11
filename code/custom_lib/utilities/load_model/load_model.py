@@ -190,7 +190,8 @@ class Load_Model(object):
         checkpoint = torch.load(self.from_checkpoint)
         self.model.load_state_dict(checkpoint['model_state_dict'], strict=True) # just features get downloaded classifier stays
         self.plot_loss = checkpoint['loss']
-        self.optimizer_chex= torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate']).load_state_dict(checkpoint['optimizer_state_dict'])
+        self.optimizer_chex=  torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
+        self.optimizer_chex.load_state_dict(checkpoint['optimizer_state_dict'])
         
         for state in self.optimizer_chex.state.values():
             for k, v in state.items():
