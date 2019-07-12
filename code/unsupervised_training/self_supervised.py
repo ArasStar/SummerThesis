@@ -58,7 +58,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   model = models.densenet121()
   #optimizer =torch.optim.RMSprop(model.parameters(), lr=learning_rate)
   criterion = torch.nn.CrossEntropyLoss().to(device = device)
-  plot_loss = []
+  plot_loss = {}
 
   #Setting permuation_set
   PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
@@ -78,7 +78,8 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   kwargs={"Common": kwarg_Common,"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position}
 
   loader = load_model.Load_Model(method=method, combo=combo, from_checkpoint =from_checkpoint, kwargs=kwargs, model=model, plot_loss=plot_loss  )
-  file_name , head_arch  = loader()
+
+  file_name , head_arch , plot_loss  = loader()
   n_heads= len(head_arch)
 
   saved_model_PATH = saved_model_PATH+  "saved_models/self_supervised/"+ file_name[:-4]
@@ -114,8 +115,13 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
         loss.backward()                                   # Backward pass: compute the weight
         optimizer.step()                                  # Optimizer: update the weights of hidden nodes
 
-        if i%200 == 0:
-          plot_loss.append(loss)
+
+        for n in range(n_heads):
+          if i%200 == n:
+            #print(head_dict['head_name'])
+            plot_loss[head_dict['head_name']].append(loss)
+
+
 
         if (i+1) % 100 == 0:                              # Logging
           print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f' %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
@@ -147,6 +153,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   head_state_list = [head["head"].state_dict()  for head in head_arch]
   optimizer_state_list=[head['optimizer'].state_dict()  for head in head_arch]
 
+
   torch.save({
              'epoch': kwarg_Common["num_epochs"] ,
              'model_state_dict': model.state_dict(),
@@ -158,7 +165,6 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   curves.plot_loss(plot_loss=plot_loss)
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
-
 
 '''
 method="relative_position"
@@ -194,6 +200,11 @@ schedule=[{"method":"Jigsaw","num_epochs":3},
           {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size300_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size300_grid_crop_size225_patch_crop_size64.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size300_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size300_grid_crop_size225_patch_crop_size64.tar"}]
+
+schedule=[ {"method":"naive_combination","combo":combo,"num_epochs":3},
+           {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+          ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
+          ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
 
 for kwargs in schedule:

@@ -25,6 +25,7 @@ class Load_Model(object):
         self.optimizer_chex = None
         self.out_D = "" if method=="TL" else {"Relative_Position":8 ,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
         self.use_cuda = use_cuda
+        self.plot_loss = plot_loss
 
         if use_cuda and torch.cuda.is_available():
             #print("using CUDA")
@@ -55,7 +56,7 @@ class Load_Model(object):
             self.set_head()
 
         #modelhead ,model, optimizer ,file_name, plot_loss
-        return file_name, self.head
+        return file_name, self.head , self.plot_loss
 
     def get_file_name(self):
 
@@ -64,10 +65,12 @@ class Load_Model(object):
             if self.combo ==[]:
                  print("PROBLEM file_name NAIVE COMB")
             file_name = self.method+"*"+"*".join(self.combo)+"*"
+            self.plot_loss = dict(zip(self.combo,[[] for i in range(len(self.combo))]))
 
         else:
             file_name = self.method
             self.combo= [self.method]
+            self.plot_loss = {self.method:[]}
 
         for c in ["Common"] + self.combo:
             args = self.kwargs[c]
@@ -176,7 +179,7 @@ class Load_Model(object):
     def load_from_Pretrained(self):
 
         print("tranfering the weights")
-        checkpoint = torch.load(self.pre_trained)
+        checkpoint = torch.load(self.pre_trained, map_location = self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'],strict=False) # just features get downloaded classifier stays
         self.optimizer_chex = torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
 
@@ -187,7 +190,7 @@ class Load_Model(object):
     def load_from_TL_checkpoint(self):
 
         print("from the checkpoint")
-        checkpoint = torch.load(self.from_checkpoint)
+        checkpoint = torch.load(self.from_checkpoint , map_location = self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'], strict=True) # just features get downloaded classifier stays
         self.plot_loss = checkpoint['loss']
         self.optimizer_chex=  torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
