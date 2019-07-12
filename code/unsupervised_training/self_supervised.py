@@ -134,9 +134,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
           print("showa giriyooor",show)
           i = 100000000
         
-        if i == 500:
-          break 
-      break
+   
 
 
 

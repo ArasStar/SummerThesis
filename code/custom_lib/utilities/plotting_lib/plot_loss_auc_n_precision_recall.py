@@ -160,12 +160,14 @@ class Curves_AUC_PrecionnRecall(object):
       return count
 
     def plot_loss(self, plot_loss, iter_range=200):
-        x = np.arange(len(plot_loss))*iter_range
-        plt.figure('loss_plot'+self.model_name)
-        plt.plot(x,plot_loss)
-        plt.xlabel('iteratons')
-        plt.ylabel('loss')
-        plt.savefig(self.root_PATH+'/plot_loss_'+self.model_name+ '.png')
+
+        for task in plot_loss.keys():
+          x = np.arange(len(plot_loss[task]))*iter_range
+          plt.figure(task+'loss_plot'+self.model_name)
+          plt.plot(x,plot_loss[task])
+          plt.xlabel('iteratons')
+          plt.ylabel(task+' loss')
+          plt.savefig(self.root_PATH+'/'+task+'plot_loss_'+self.model_name+ '.png')
 
 
 
