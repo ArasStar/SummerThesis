@@ -22,16 +22,16 @@ print("hooop")
 
 saved_model_PATH="/vol/bitbucket/ay1218/"
 root_PATH_dataset = "/vol/gpudata/ay1218/"
-root_PATH_dataset = saved_model_PATH
+#root_PATH_dataset = saved_model_PATH
 
 
 root_PATH = "/homes/ay1218/Desktop/"
 
 #comment out below for local comp
 
-root_PATH = "/home/aras/Desktop/"
-root_PATH_dataset = root_PATH
-saved_model_PATH=root_PATH
+#root_PATH = "/home/aras/Desktop/"
+#root_PATH_dataset = root_PATH
+#saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
@@ -63,7 +63,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
                                                 transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-   
+
 
     model=models.densenet121(num_classes = 5)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -86,10 +86,10 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
         print("training from scratch")
         file_name = "from_scratch_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+".tar"
 
-    
+
     saved_model_PATH = saved_model_PATH+"saved_models/transfer_learning/"+file_name[:-4]
     if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
-    
+
     labels_path = root_PATH+"SummerThesis/code/custom_lib/chexpert_load/labels.pt"
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH +"SummerThesis/code/custom_lib/chexpert_load/train.csv",transform,
                                                                     kwarg_Common["batch_size"],labels_path = labels_path,root_dir= root_PATH_dataset )
@@ -126,8 +126,6 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
             if i % 200 == 0:
                 plot_loss.append(loss)
             #DELETEEEEE
-            break
-        break
 
     aftertDT = datetime.datetime.now()
     c = aftertDT - currentDT
@@ -152,9 +150,10 @@ schedule=[  {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_
 
 schedule=[  {"transfer_learning":0}]
 
+p = saved_model_PATH +'saved_models/transfer_learning/'
 
-schedule=[  { "batch_size": 8},
-            { "from_checkpoint":"/home/aras/Desktop/saved_models/transfer_learning/from_scratch_epoch3_batch8_learning_rate0.0001/from_scratch_epoch3_batch8_learning_rate0.0001.tar"}    ]
+schedule=[  { "batch_size": 16},
+            { "from_checkpoint":p+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 for kwargs in schedule:
     transfer_learning(**kwargs)
