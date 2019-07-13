@@ -149,9 +149,14 @@ schedule=[  {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_
 
 schedule=[  {"transfer_learning":0}]
 
-p = saved_model_PATH +'saved_models/transfer_learning/'
+c = saved_model_PATH +'saved_models/transfer_learning/'
+p = saved_model_PATH +'saved_models/self_supervised/'
 
-schedule=[  { "from_checkpoint":p+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
+schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
+
+
+schedule=[  { "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}    ]
+
 
 for kwargs in schedule:
     transfer_learning(**kwargs)
