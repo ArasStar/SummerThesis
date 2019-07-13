@@ -48,8 +48,8 @@ class Load_Model(object):
 
 
         elif self.from_checkpoint:
-            self.load_from_checkpoint()
-            file_name = self.get_file_name()
+            file_name = self.load_from_checkpoint()
+
 
         else:
             file_name = self.get_file_name()
@@ -105,10 +105,13 @@ class Load_Model(object):
 
           self.method = from_checkpoint[from_checkpoint.index("_supervised/")+12: from_checkpoint.index('combination')+11]
           self.combo = from_checkpoint[from_checkpoint.index("*")+1: from_checkpoint.index("*_num_epochs")].split("*")
+          file_name = self.method+"*"+"*".join(self.combo)+"*"
 
         else:
           self.method = from_checkpoint[from_checkpoint.index("_supervised/")+12:from_checkpoint.index('_num_epochs')]
           self.combo = [self.method]
+          file_name = self.method
+
 
         #loading model
         checkpoint = torch.load(self.from_checkpoint, map_location = self.device)
@@ -132,6 +135,17 @@ class Load_Model(object):
                     if torch.is_tensor(v):
                         state[k] = v.to(device=self.device)
 
+        #setting file name
+
+        for c in ["Common"] + self.combo:
+            args = self.kwargs[c]
+            for param_name in self.param_names_dict[c]:
+                param_idx = param_name[1:]
+                param = args[param_idx]
+                file_name = file_name + param_name + str(param)
+
+        file_name = file_name + ".tar"
+        return file_name
 
     def update_params_from_checkpoint(self):
 
