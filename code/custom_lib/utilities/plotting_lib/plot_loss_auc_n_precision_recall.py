@@ -88,7 +88,7 @@ class Curves_AUC_PrecionnRecall(object):
         #print("recall", recall)
         #print("FPR", false_positive_rate)
 
-      plt.savefig(self.root_PATH+"/saved_AUC_and_P_R"+ self.model_name+ ".pdf")
+      plt.savefig(self.root_PATH+"/saved_AUC_and_P_R"+ ".pdf")
 
 
     def auc_difference_print(self):
@@ -106,11 +106,19 @@ class Curves_AUC_PrecionnRecall(object):
 
       #[print(f'{k: <{max_feat_len}}\t auc: {self.auc_scores[k]:.3}\t chexpert auc: {chexpert_auc_scores[k]:.3}\t difference:\ {(chexpert_auc_scores[k]-self.auc_scores[k]):.3}') for k in self.list_classes]
       #print(f'\nAverage auc: {avg_auc:.3} \t CheXpert average auc {avg_chexpert_auc:.3}\t Difference {(avg_chexpert_auc-avg_auc):.3}')
-
+      file_obj = open(self.root_PATH+"/chexpert_difference.txt","w")
       printlist =['{0: <{1}}\t auc: {2:.3}\t chexpert auc: {3:.3}\t difference: {4:.3}'.format( k, max_feat_len, self.auc_scores[k], chexpert_auc_scores[k] ,chexpert_auc_scores[k]-self.auc_scores[k]) for k in self.list_classes]
+
+      file_obj.write("\n".join(printlist))
+
       for pr in printlist:
           print(pr)
-      print('\nAverage auc: {0:.3} \t CheXpert average auc {1:.3}\t Difference {2:.3}\n'.format(avg_auc,avg_chexpert_auc,avg_chexpert_auc-avg_auc))
+
+      avergare_dif = '\nAverage auc: {0:.3} \t CheXpert average auc {1:.3}\t Difference {2:.3}\n'.format(avg_auc,avg_chexpert_auc,avg_chexpert_auc-avg_auc)
+      file_obj.write(avergare_dif)
+      file_obj.write("\n" + self.model_name)
+
+      print(avergare_dif)
       #line_new = '{:>12}  {:>12}  {:>12}'.format(word[0], word[1], word[2])
 
 
@@ -161,15 +169,24 @@ class Curves_AUC_PrecionnRecall(object):
 
     def plot_loss(self, plot_loss, iter_range=200):
 
-        for task in plot_loss.keys():
-          x = np.arange(len(plot_loss[task]))*iter_range
-          plt.figure(task+'loss_plot'+self.model_name)
-          plt.plot(x,plot_loss[task])
-          plt.xlabel('iteratons')
-          plt.ylabel(task+' loss')
-          plt.savefig(self.root_PATH+'/'+task+'plot_loss_'+self.model_name+ '.png')
+        if isinstance(plot_loss,dict):
+            for task in plot_loss.keys():
+              x = np.arange(len(plot_loss[task]))*iter_range
+              plt.figure(task+'loss_plot'+self.model_name)
+              plt.plot(x,plot_loss[task])
+              plt.xlabel('iteratons')
+              plt.ylabel(task+' loss')
+              plt.savefig(self.root_PATH+'/'+task+'plot_loss_'+ '.png')
 
-
+        elif isinstance(plot_loss,list):
+            x = np.arange(len(plot_loss))*iter_range
+            plt.figure('loss_plot'+self.model_name)
+            plt.plot(x,plot_loss)
+            plt.xlabel('iteratons')
+            plt.ylabel(' loss')
+            plt.savefig(self.root_PATH+'/'+'plot_loss_'+ '.png')
+        else:
+            print("SOMETHING WENT WRONG IN PLOTTIN THE LOSS AUC .PY")
 
 
 

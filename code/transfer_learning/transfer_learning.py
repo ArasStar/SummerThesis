@@ -31,7 +31,7 @@ root_PATH = "/homes/ay1218/Desktop/"
 
 #root_PATH = "/home/aras/Desktop/"
 #root_PATH_dataset = root_PATH
-#saved_model_PATH=root_PATH
+saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
@@ -57,13 +57,12 @@ else:
 def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH,
                                                         root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH):
 
+
     learning_rate=0.0001
     #after patch transformation
     transform= transforms.Compose([             transforms.Resize((resize,resize)),transforms.ToTensor(),
                                                 transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-
 
     model=models.densenet121(num_classes = 5)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -76,11 +75,11 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
 
     if pre_trained_PATH :
         loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
-        file_name , optimizer  = loader()
+        file_name , optimizer ,plot_loss  = loader()
 
     elif from_checkpoint :
         loader = load_model.Load_Model(method="TL",from_checkpoint = from_checkpoint, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
-        file_name , optimizer  = loader()
+        file_name , optimizer , plot_loss  = loader()
 
     else:
         print("training from scratch")
@@ -94,6 +93,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH +"SummerThesis/code/custom_lib/chexpert_load/train.csv",transform,
                                                                     kwarg_Common["batch_size"],labels_path = labels_path,root_dir= root_PATH_dataset )
 
+    print(len(plot_loss))
     currentDT = datetime.datetime.now()
     model=model.to(device=device)
 
@@ -135,14 +135,13 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
 
     # Calculating valid error plotting AUC , Precisinon -Recall , plot loss , saving figures, printingg auc differences
     PATH =  saved_model_PATH+"/"+file_name
-    val = validation.Validation(chexpert_load=chexpert_load,model=model, plot_loss=plot_loss, bs = 16, root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH = saved_model_PATH, gpu=use_cuda )
+    val = validation.Validation(chexpert_load=chexpert_load,model=model, plot_loss=plot_loss, bs = 16, root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH = saved_model_PATH, file_name=file_name, gpu=use_cuda )
     val()
 
     torch.save({'epoch':  num_epochs ,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':plot_loss}, PATH)
-
 #FINIIIIIISH
 schedule=[  {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/naive_combination_epoch12_batch16_learning_rate0.0001_split3.0_perm_set_size300_grid_size225_patch_size64.tar"},
             {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/jigsaw_epoch3_batch16_learning_rate0.0001_perm_set_size300_grid_size225_patch_size64.tar"},
@@ -152,8 +151,7 @@ schedule=[  {"transfer_learning":0}]
 
 p = saved_model_PATH +'saved_models/transfer_learning/'
 
-schedule=[  { "batch_size": 16},
-            { "from_checkpoint":p+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
+schedule=[  { "from_checkpoint":p+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 for kwargs in schedule:
     transfer_learning(**kwargs)

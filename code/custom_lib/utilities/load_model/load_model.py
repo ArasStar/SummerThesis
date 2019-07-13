@@ -44,7 +44,7 @@ class Load_Model(object):
             elif self.from_checkpoint:
                 file_name = self.load_from_TL_checkpoint()
 
-            return file_name , self.optimizer_chex
+            return file_name , self.optimizer_chex ,self.plot_loss
 
 
         elif self.from_checkpoint:
@@ -120,13 +120,13 @@ class Load_Model(object):
 
         head_dict = checkpoint["model_head"] # dict headname: headstateDict
         opt_dict = checkpoint['optimizer_state_dict']
-        
+
         for head in self.head:
 
             h_name = head["head_name"]
             head["head"].load_state_dict(head_dict[h_name])
             head["optimizer"].load_state_dict(opt_dict[h_name])
-            
+
             for state in head['optimizer'].state.values():
                 for k, v in state.items():
                     if torch.is_tensor(v):
@@ -185,7 +185,7 @@ class Load_Model(object):
 
         splited = self.pre_trained.split('/')[-1]
         file_name ="TL_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"--" + splited
-        return file_name 
+        return file_name
 
     def load_from_TL_checkpoint(self):
 
@@ -195,7 +195,7 @@ class Load_Model(object):
         self.plot_loss = checkpoint['loss']
         self.optimizer_chex=  torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
         self.optimizer_chex.load_state_dict(checkpoint['optimizer_state_dict'])
-        
+
         for state in self.optimizer_chex.state.values():
             for k, v in state.items():
                 if torch.is_tensor(v):
