@@ -29,9 +29,9 @@ root_PATH_dataset = "/vol/gpudata/ay1218/"
 root_PATH = "/homes/ay1218/Desktop/"
 
 #coomment out  below for local comp
-#root_PATH = "/home/aras/Desktop/"
-#root_PATH_dataset = root_PATH
-#saved_model_PATH=root_PATH
+root_PATH = "/home/aras/Desktop/"
+root_PATH_dataset = root_PATH
+saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
@@ -121,6 +121,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
             #print(head_dict['head_name'])
             plot_loss[head_dict['head_name']].append(loss)
 
+            #print(len(plot_loss[head_dict['head_name']]))
 
 
         if (i+1) % 100 == 0:                              # Logging
@@ -135,15 +136,12 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
           i = 100000000
 
 
-
-
   print('training done')
 
   aftertDT = datetime.datetime.now()
   c=aftertDT-currentDT
   mins,sec=divmod(c.days * 86400 + c.seconds, 60)
   print(mins,"mins ", sec,"secs")
-
 
   print('END--',file_name)
 
@@ -152,7 +150,6 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   head_name_list = [head["head_name"]  for head in head_arch]
   head_state_list = [head["head"].state_dict()  for head in head_arch]
   optimizer_state_list=[head['optimizer'].state_dict()  for head in head_arch]
-
 
   torch.save({
              'epoch': kwarg_Common["num_epochs"] ,
@@ -201,8 +198,7 @@ schedule=[{"method":"Jigsaw","num_epochs":3},
           ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size300_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size300_grid_crop_size225_patch_crop_size64.tar"}]
 
-schedule=[ {"method":"naive_combination","combo":combo,"num_epochs":3},
-           {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+schedule=[ {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
