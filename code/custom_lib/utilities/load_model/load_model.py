@@ -198,7 +198,7 @@ class Load_Model(object):
         self.optimizer_chex = torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
 
         splited = self.pre_trained.split('/')[-1]
-        file_name ="TL_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+"--" + splited
+        file_name ="TL_epoch"+str(self.kwargs["Common"]["num_epochs"])+"_batch"+str(self.kwargs["Common"]["batch_size"])+"_learning_rate"+str(self.kwargs["Common"]["learning_rate"])+"--" + splited
         return file_name
 
     def load_from_TL_checkpoint(self):

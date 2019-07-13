@@ -127,6 +127,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
                 plot_loss.append(loss)
             #DELETEEEEE
 
+
     aftertDT = datetime.datetime.now()
     c = aftertDT - currentDT
     mins,sec = divmod(c.days * 86400 + c.seconds, 60)
@@ -155,7 +156,9 @@ p = saved_model_PATH +'saved_models/self_supervised/'
 schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 
-schedule=[  { "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}    ]
+schedule=[  { "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"},
+ { "pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+  ,{ "pre_trained_PATH":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}]
 
 
 for kwargs in schedule:
