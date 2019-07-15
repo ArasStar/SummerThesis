@@ -46,6 +46,9 @@ class Load_Model(object):
 
             return file_name , self.optimizer_chex ,self.plot_loss
 
+        elif self.method =="CC-GAN"
+            file_name=self.method
+
 
         elif self.from_checkpoint:
             file_name = self.load_from_checkpoint()
