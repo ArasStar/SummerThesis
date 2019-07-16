@@ -73,7 +73,7 @@ def load_posw(list_classes =  ['Atelectasis', 'Cardiomegaly', 'Consolidation', '
 class CheXpertDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, csv_file, root_dir, transform=None, labels_path=None, list_classes=None ,path=""):
+    def __init__(self, csv_file, root_dir, transform=None, labels_path=None, list_classes=None ,path="", label_rate= 0.2):
 
         #super().__init__()
         self.root_dir = root_dir
@@ -112,6 +112,13 @@ class CheXpertDataset(Dataset):
 
 
         self.observations_frame[self.list_classes] = pd.DataFrame(self.labels.numpy(), columns= self.list_classes)
+
+
+        #setting label_ok for CC_GAN
+        n= len(self.observations_frame)
+        n_ones = round(n*label_rate)
+        labelok_list = np.append(np.ones(n_ones),np.zeros(n-n_ones))
+        self.observations_frame["use_label"] = pd.DataFrame(labelok_list, columns= ["use_label"])
        # df_labels = pd.DataFrame(labels.numpy(),columns=[cl+"_feat" for cl in self.list_classes])
        #self.observations_frame.join(df_labels)
 
@@ -121,17 +128,18 @@ class CheXpertDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        instance = self.observations_frame.loc[idx,["Path"]+self.list_classes]
+        instance = self.observations_frame.loc[idx,["use_label","Path"]+self.list_classes]
         img_name =  self.root_dir + instance.loc[ 'Path']
         image = Image.open(img_name)
         #image = transforms.ToPILImage()(image)
         labels = torch.from_numpy(instance[self.list_classes].values.astype(np.float32))
+        label_ok = instance.loc["use_label"]
 
         # RETURNING IMAGE AND LABEL SEPERATELY FOR TORCH TRANSFORM LIB
         if self.transform:
             image = self.transform(image)
 
-        return image, labels
+        return image, labels ,label_ok
 
     def feature_string(self,row, u_one_features, u_zero_features):
 
@@ -155,10 +163,10 @@ class CheXpertDataset(Dataset):
 
         return feature_list
 
-def chexpert_load(csv_file_name, transformation, batch_size,labels_path=None,list_classes=None,shuffle=True,root_dir=""):
+def chexpert_load(csv_file_name, transformation, batch_size,labels_path=None,list_classes=None,shuffle=True,root_dir="",label_rate = 0.2):
 
     cheXpert_dataset = CheXpertDataset(csv_file=csv_file_name,
-                                       root_dir=root_dir, transform=transformation,labels_path=labels_path,list_classes=list_classes)
+                                       root_dir=root_dir, transform=transformation, labels_path=labels_path, list_classes=list_classes, label_rate=label_rate)
 
     dataloader = DataLoader(cheXpert_dataset, batch_size=batch_size, shuffle=shuffle)
 

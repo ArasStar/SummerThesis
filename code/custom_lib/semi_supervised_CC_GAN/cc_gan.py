@@ -15,7 +15,7 @@ class Generator(torch.nn.Module):
         In the constructor we instantiate two nn.Linear modules and assign them as
         member variables.
         """
-        super(Gen, self).__init__()
+        super(Generator, self).__init__()
 
         self.conv_layer1 = nn.Conv2d(D_in, 64, kernel_size=4, stride=2, padding=1)
         self.bn1 =  nn.BatchNorm2d(64)
@@ -26,19 +26,19 @@ class Generator(torch.nn.Module):
         self.conv_layer3 = nn.Conv2d(128+1,256, kernel_size=4, stride=2, padding=1)
         self.bn3 = nn.BatchNorm2d(256)
 
-        self.conv_layer4 = nn.Conv2d(256,512 64, kernel_size=4, stride=2, padding=1)
+        self.conv_layer4 = nn.Conv2d(256,512, kernel_size=4, stride=2, padding=1)
         self.bn4 = nn.BatchNorm2d(512)
 
-        self.upconv_layer5 = nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2,padding=1))
+        self.upconv_layer5 = nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2,padding=1)
         self.bn5 = nn.BatchNorm2d(256)
 
-        self.upconv_layer6 = nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1))
+        self.upconv_layer6 = nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1)
         self.bn6 = nn.BatchNorm2d(128)
 
-        self.upconv_layer7 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1))
+        self.upconv_layer7 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1)
         self.bn7 = nn.BatchNorm2d(64)
 
-        self.upconv_layer8 = nn.ConvTranspose2d(64, D_in, kernel_size=4, stride=2, padding=1))
+        self.upconv_layer8 = nn.ConvTranspose2d(64, D_in, kernel_size=4, stride=2, padding=1)
         self.bn8 = nn.BatchNorm2d(D_in)
 
 
@@ -52,7 +52,7 @@ class Generator(torch.nn.Module):
         x = F.ReLu(self.bn2(self.conv_layer2(x)))
 
         #putting the conditioning
-        assert(x.shape[2]==lowres_x.shape[2]) "dimensions not matching between conv img and lowres img "+str(x.shape)+"--"+str(lowres_x.shape)
+        assert(x.shape[2]==lowres_x.shape[2]), "dimensions not matching between conv img and lowres img "+str(x.shape)+"--"+str(lowres_x.shape)
         x=torch.cat((x,lowres_x))
 
         x = torch.stack([torch.cat((x_i,lowres_x[i]))
@@ -76,7 +76,7 @@ class Generator(torch.nn.Module):
 
 class Discriminator(torch.nn.Module):
     #discriminator its basically a deep model(Densnet) relu s changed to leaky relu
-    def __init__(self):
+    def __init__(self,pretrained=False):
         """
         In the constructor we instantiate two nn.Linear modules and assign them as
         member variables.
@@ -84,7 +84,7 @@ class Discriminator(torch.nn.Module):
         super(Discriminator, self).__init__()
 
         #Densenet with relu s replaced with leaky relu
-        self.discriminator = modified_densenet.densenet121(num_classes=6)
+        self.discriminator = modified_densenet.densenet121(num_classes=6, pretrained=pretrained)
 
     def __call__(self,x):
          return self.discriminator(x)
@@ -94,7 +94,7 @@ class Discriminator(torch.nn.Module):
 class Patcher_CC_GAN(object):
     def __init__(self, image_batch,hole_size="",transform ="",show=False, gpu = True):
 
-        _, _, self.h, _ = image_batch.shape
+        self.bs, _, self.h, _ = image_batch.shape
         self.image_batch = image_batch
         self.device = torch.device('cuda:0') if gpu else torch.device('cpu')
         self.show = show  # print cropped images and show where they are 1 time for each batch
@@ -106,7 +106,7 @@ class Patcher_CC_GAN(object):
     def __call__(self):
 
         cropped_images = torch.Tensor()
-        low_res_images=F.interpolate(self.image_batch, scale_factor= 1.0/4, mode='bilinear')
+        low_res_images=F.interpolate(self.image_batch[:,0], scale_factor= 1.0/4, mode='bilinear').view(self.bs,1,self.h/4,self.h/4)
         shift_row_col=[]
 
         for idx, image in enumerate(self.image_batch):

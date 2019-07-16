@@ -22,6 +22,7 @@ class Load_Model(object):
         self.kwargs = kwargs
         self.model= model
         self.head = None
+        self.optimizer = optimizer
         self.optimizer_chex = None
         self.out_D = "" if method=="TL" else {"Relative_Position":8 ,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
         self.use_cuda = use_cuda
@@ -39,15 +40,23 @@ class Load_Model(object):
         if self.method == "TL":
 
             if self.pre_trained:
-                file_name = self.load_from_Pretrained()
+                file_name = self.tl_load_from_Pretrained()
 
             elif self.from_checkpoint:
                 file_name = self.load_from_TL_checkpoint()
 
             return file_name , self.optimizer_chex ,self.plot_loss
 
-        elif self.method =="CC-GAN":
-            file_name=self.method
+        elif self.method =="CC_GAN":
+
+            if self.pre_trained:
+                file_name = self.gan_load_from_Pretrained()
+
+            elif self.from_checkpoint:
+                file_name = self.load_from_gan_checkpoint()
+
+
+            return file_name ,self.plot_loss
 
 
         elif self.from_checkpoint:
@@ -193,7 +202,7 @@ class Load_Model(object):
 
             self.kwargs["Jigsaw"]["path_permutation_set"].replace(str(old_perm)+".pt",str(perm_set_size)+".pt")
 
-    def load_from_Pretrained(self):
+    def tl_load_from_Pretrained(self):
 
         print("tranfering the weights")
         checkpoint = torch.load(self.pre_trained, map_location = self.device)
@@ -210,7 +219,7 @@ class Load_Model(object):
         checkpoint = torch.load(self.from_checkpoint , map_location = self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'], strict=True) # just features get downloaded classifier stays
         self.plot_loss = checkpoint['loss']
-        self.optimizer_chex=  torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
+        self.optimizer_chex =  torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
         self.optimizer_chex.load_state_dict(checkpoint['optimizer_state_dict'])
 
         for state in self.optimizer_chex.state.values():
@@ -236,9 +245,58 @@ class Load_Model(object):
 
 
 
+    def gan_load_from_Pretrained(self):
+
+        print("tranfering the weights")
+        checkpoint = torch.load(self.pre_trained, map_location = self.device)
+        self.model[1].load_state_dict(checkpoint['D_model_state_dict'],strict=False) # just features get downloaded in the discriminator
+
+        splited = self.pre_trained.split('/')[-1]
+
+        file_name=self.method + "_".join([key + str(kwargs["Common"][key]) for key in kwargs["Common"].keys()])+"---"+splited
+
+        return file_name
+
+    def load_from_gan_checkpoint():
+
+        print("from the checkpoint")
+        checkpoint = torch.load(self.from_checkpoint , map_location = self.device)
+        self.model[0].load_state_dict(checkpoint['G_model_state_dict'], strict=True) # just features get downloaded classifier stays
+        self.plot_loss[0] = checkpoint['G_loss']
+        self.optimizer[0]=  torch.optim.Adam(self.model[0].parameters(), lr=self.kwargs["Common"]['learning_rate'])
+        self.optimizer[0].load_state_dict(checkpoint['G_optimizer_state_dict'])
+        for state in self.optimizer[0].state.values():
+            for k, v in state.items():
+                if torch.is_tensor(v):
+                    state[k] = v.to(device=self.device)
+
+        self.model[1].load_state_dict(checkpoint['D_model_state_dict'], strict=True) # just features get downloaded classifier stays
+        self.plot_loss[1] = checkpoint['D_loss']
+        self.optimizer[1]=  torch.optim.Adam(self.model[0].parameters(), lr=self.kwargs["Common"]['learning_rate'])
+        self.optimizer[1].load_state_dict(checkpoint['D_optimizer_state_dict'])
 
 
+        for state in self.optimizer[1].state.values():
+            for k, v in state.items():
+                if torch.is_tensor(v):
+                    state[k] = v.to(device=self.device)
 
+
+        file_name = self.from_checkpoint.split("/")[-1]
+
+        start_i = file_name.index('batch')
+        end_i =file_name.index('_learning_rate')
+        current_batch_size = int(file_name[start_i+5:end_i])
+        self.kwargs["Common"]["batch_size"] = current_batch_size
+
+
+        start_i = file_name.index('epoch')
+        end_i =file_name.index('_batch')
+        initial_epoch = int(file_name[start_i+5:end_i])
+        file_name = file_name.replace(file_name[start_i:end_i],'epoch'+ str( initial_epoch + self.kwargs["Common"]["num_epochs"]))
+
+
+        return file_name
 
 
 

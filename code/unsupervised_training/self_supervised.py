@@ -99,7 +99,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   currentDT = datetime.datetime.now()
   print('START--',file_name)
   for epoch in range(num_epochs):
-      for i,  (images, observations) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
+      for i,  (images, observations,_) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
 
         head_dict = head_arch[i % n_heads]
         model.classifier = head_dict["head"]
