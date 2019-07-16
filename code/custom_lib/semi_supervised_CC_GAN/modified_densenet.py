@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as cp
 from collections import OrderedDict
-from .utils import load_state_dict_from_url
+from torchvision import utils#load_state_dict_from_url
 
 
 __all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
@@ -81,8 +81,7 @@ class _Transition(nn.Sequential):
         super(_Transition, self).__init__()
         self.add_module('norm', nn.BatchNorm2d(num_input_features))
         self.add_module('lrelu', nn.LeakyReLU(inplace=True))
-        self.add_module('conv', nn.Conv2d(num_input_features, num_output_features,
-                                          kernel_size=1, stride=1, bias=False))
+        self.add_module('conv', nn.Conv2d(num_input_features, num_output_features, kernel_size=1, stride=1, bias=False))
         self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
 
 
@@ -153,7 +152,7 @@ class DenseNet(nn.Module):
 
     def forward(self, x):
         features = self.features(x)
-        out = F.LeakyReLU(features, inplace=True)
+        out = F.leaky_relu(features, 0.02 ,inplace=True)
         out = F.adaptive_avg_pool2d(out, (1, 1)).view(features.size(0), -1)
         out = self.classifier(out)
         return out
@@ -167,7 +166,7 @@ def _load_state_dict(model, model_url, progress):
     pattern = re.compile(
         r'^(.*denselayer\d+\.(?:norm|lrelu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
 
-    state_dict = load_state_dict_from_url(model_url, progress=progress)
+    state_dict = utils.load_state_dict_from_url(model_url, progress=progress)
     for key in list(state_dict.keys()):
         res = pattern.match(key)
         if res:

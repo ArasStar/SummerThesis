@@ -74,11 +74,11 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
 
 
     if pre_trained_PATH :
-        loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
+        loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH, kwargs=kwargs, model=model,  plot_loss=plot_loss  )
         file_name , optimizer ,plot_loss  = loader()
 
     elif from_checkpoint :
-        loader = load_model.Load_Model(method="TL",from_checkpoint = from_checkpoint, kwargs=kwargs, model=model, optimizer=optimizer, plot_loss=plot_loss  )
+        loader = load_model.Load_Model(method="TL",from_checkpoint = from_checkpoint, kwargs=kwargs, model=model,  plot_loss=plot_loss  )
         file_name , optimizer , plot_loss  = loader()
 
     else:
@@ -146,9 +146,6 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
                 'loss':plot_loss}, PATH)
 
 #FINIIIIIISH
-schedule=[  {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/naive_combination_epoch12_batch16_learning_rate0.0001_split3.0_perm_set_size300_grid_size225_patch_size64.tar"},
-            {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/jigsaw_epoch3_batch16_learning_rate0.0001_perm_set_size300_grid_size225_patch_size64.tar"},
-            {"transfer_learning":1,"pre_trained_PATH":"/home/aras/Desktop/saved_models/relative_position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
 
 schedule=[  {"transfer_learning":0}]
 
@@ -158,8 +155,7 @@ p = saved_model_PATH +'saved_models/self_supervised/'
 schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 
-schedule=[  { "pre_trained_PATH":p+"Relative_Position_num_epochs6_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs6_batch_size16_learning_rate0.0001_split3.0.tar"},
- { "pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+schedule=[ { "pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
   ,{ "pre_trained_PATH":p+"Jigsaw_num_epochs6_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs6_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
 
