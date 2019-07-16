@@ -62,14 +62,17 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
   #Setting permuation_set
   PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
-
   #just ToTensor before patch
   transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
 
   #after patch transformation
+  '''
   transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+  '''
+  transform_after_patching= transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
+                                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
   #constant vars
   kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
@@ -163,6 +166,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
 
+
 '''
 method="relative_position"
 #Params for relative_position
@@ -201,6 +205,12 @@ schedule=[{"method":"Jigsaw","num_epochs":3},
 schedule=[ {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
+
+
+schedule=[{"method":"Jigsaw","num_epochs":3,"grid_crop_size":225,"patch_crop_size":70},
+          {"method":"Jigsaw","num_epochs":3,"grid_crop_size":225,"patch_crop_size":75},
+          {"method":"Jigsaw","num_epochs":3,"grid_crop_size":64*3,"patch_crop_size":64},
+          {"method":"Jigsaw","num_epochs":3,"grid_crop_size":96*3,"patch_crop_size":96}]
 
 
 for kwargs in schedule:
