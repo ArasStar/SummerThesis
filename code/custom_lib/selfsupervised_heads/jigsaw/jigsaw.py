@@ -16,7 +16,7 @@ class Jigsaw(object):
         assert (self.grid_crop_size %3 == 0), "has grid crop size has to be divisable by 3"
         self.grid_patch_size = int(self.grid_crop_size / 3)
         self.patch_crop_size = patch_crop_size
-        assert (self.grid_patch_size > self.patch_crop_size), "patch crop size has to be smaller then grid patch size"
+        assert (self.grid_patch_size >= self.patch_crop_size), "patch crop size has to be smaller then grid patch size"
 
         self.device = torch.device('cuda') if gpu else torch.device('cpu')
         assert(path_permutation_set.__contains__(str(perm_set_size))), "path file and perm set size not matching"
@@ -76,9 +76,15 @@ class Jigsaw(object):
                 col_start = 0 + self.grid_patch_size * j;
                 col_finit = col_start + self.grid_patch_size
 
-                patches[patch_n,:, :], scol, srow = self.random_crop(grid[:, row_start:row_finit, col_start:col_finit],
+                if self.grid_patch_size > self.patch_crop_size:
+
+                    patches[patch_n,:, :], scol, srow = self.random_crop(grid[:, row_start:row_finit, col_start:col_finit],
                                                                       self.patch_crop_size)
-                cord_patches.append((scol, srow))
+                    cord_patches.append((scol, srow))
+                else:
+                    patches[patch_n,:, :] = grid[:, row_start:row_finit, col_start:col_finit]
+                    cord_patches.append((0, 0))
+
                 patch_n = patch_n + 1
 
         return patches, cord_patches
