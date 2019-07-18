@@ -20,7 +20,7 @@ import torchvision.utils as vutils
 import datetime
 import sys
 
-torch.autograd.set_detect_anomaly(True)
+#torch.autograd.set_detect_anomaly(True)
 saved_model_PATH="/vol/bitbucket/ay1218/"
 
 root_PATH_dataset = "/vol/gpudata/ay1218/"
@@ -53,8 +53,9 @@ else:
     device = torch.device('cpu')
 
 
-def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_checkpoint=None, from_Pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
+def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1, from_checkpoint=None, from_Pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
 
+    kwargs_cc_gan_patch ={"show":show, "gpu" : use_cuda}
     kwarg_Common ={"num_epochs":num_epochs,"learning_rate":lr,"batch_size":batch_size}
     kwargs={"Common":kwarg_Common}
 
@@ -70,7 +71,7 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/train.csv",
                                                                      transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset)
     netD = cc_gan.Discriminator()
-    netG = cc_gan.Generator()
+    netG = cc_gan.Generator(noise=noised)
     G_losses = []
     D_losses = []
 
@@ -135,31 +136,35 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
                 if l==1: index_list.append(i)
             #index_list = torch.tensor(index_list)
             if index_list:
-                errD_real = advs_criterion( sig(output[:, 0].view(-1)), label) + classification_criterion(output[:,1:][index_list,:],class_labels[index_list,:])
+                errD_real = advs_criterion( sig(output[:, 0].view(-1)), label) + classification_criterion(output[index_list,1:] ,class_labels[index_list,:])
             else:
                 print("noo index_list",index_list)
                 errD_real = advs_criterion( sig(output[:, 0].view(-1)), label)
+
             # Calculate gradients for D in backward pass
             errD_real.backward()
             D_x = output[:,0].view(-1).mean().item()
 
             ## Train with all-fake batch
             # Generate batch of latent vectors (context conditioned in our case)
-            patcher = cc_gan.Patcher_CC_GAN(real_images)#, transform = transform_after_patching)
+            patcher = cc_gan.Patcher_CC_GAN(real_images,**kwargs_cc_gan_patch)#, transform = transform_after_patching)
             context_conditioned,low_res ,cord = patcher()
             # Generate fake image batch with G
-            fake = netG(context_conditioned,low_res,cord)
+            noise = torch.randn(batch_size,100,1, 1)
+            fake = netG(context_conditioned,low_res,cord,noise)
             label.fill_(fake_label)
 
+            '''
+            filled_image = context_conditioned.clone()
+            hole_size = cord[0]
+            for i , f_i in enumerate(filled_image):
+                row = cord[1][i][0]
+                col = cord[1][i][1]
+                f_i[row:row+hole_size,col:col+hole_size] = fake[i,row:row+hole_size,col:col+hole_size].clone()
 
-            size = cord[0]
-            for i, x_i in enumerate(fake):
-                row= cord[1][i][0]
-                col= cord[1][i][1]
-                context_conditioned[i,:,row:row+size,col:col+size] =  x_i[:,row:row+size,col:col+size]
-
-            # Classify all fake batch with D
-            output = netD(context_conditioned)
+            '''
+            # Classify all fake batch with D (din't forget to detach because you just optimize discrimantor)
+            output = netD(fake.detach())
             # Calculate D's loss on the all-fake batch
             errD_fake =  advs_criterion( sig(output[:, 0].view(-1)), label)
             # Calculate the gradients for this batch
@@ -178,12 +183,16 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
             # Since we just updated D, perform another forward pass of all-fake batch through D
             output = netD(fake)
             # Calculate G's loss based on this output
-            errG = advs_criterion(output[:, 0].view(-1), label) #+ classification_criterion(output[1:], class_labels)
+            errG = advs_criterion(sig(output[:, 0].view(-1)), label) #+ classification_criterion(output[1:], class_labels)
             # Calculate gradients for G
             errG.backward()
-            D_G_z2 = output[:,0].mean().item()
+            D_G_z2 = output[:,0].view(-1).mean().item()
             # Update G
             optimizerG.step()
+
+
+
+            print("breaking");break
 
             # Output training stats
             if i % 100 == 0:
@@ -201,13 +210,14 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
                 G_losses.append(errG.item())
                 D_losses.append(errD.item())
 
+            '''
             # Check how the generator is doing by saving G's output on fixed_noise
             if ((epoch == num_epochs-1) and (i == len(dataloader)-1)):
 
                 with torch.no_grad():
                     fake = netG(fixed_noise).detach().cpu()
                 img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
-
+            '''
 
     print('training done')
     aftertDT = datetime.datetime.now()
@@ -241,8 +251,9 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig(PATH+'/'+'plot_loss_'+ '.png')
 
+    #plt.savefig(PATH+'/'+'plot_loss_'+ '.png')
+    plt.show()
 
 
 
@@ -259,7 +270,7 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
 
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
-schedule=[ {"num_epochs":3}]
+schedule=[ {"num_epochs":3,"show":False}]
 
 
 for kwargs in schedule:
