@@ -20,7 +20,7 @@ import torchvision.utils as vutils
 import datetime
 import sys
 
-#torch.autograd.set_detect_anomaly(True)
+torch.autograd.set_detect_anomaly(True)
 saved_model_PATH="/vol/bitbucket/ay1218/"
 
 root_PATH_dataset = "/vol/gpudata/ay1218/"
@@ -154,21 +154,24 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
             fake = netG(context_conditioned,low_res,cord,noise)
             label.fill_(fake_label)
 
-            '''
-            filled_image = context_conditioned.clone()
+
+            '''PROBLEEEEEEm'''
             hole_size = cord[0]
-            for i , f_i in enumerate(filled_image):
+            for idx , f_i in enumerate(fake):
+                mask=torch.zeros(320,320)
                 row = cord[1][i][0]
                 col = cord[1][i][1]
-                f_i[row:row+hole_size,col:col+hole_size] = fake[i,row:row+hole_size,col:col+hole_size].clone()
+                mask[row:row+hole_size,col:col+hole_size]=1
+                fake[idx].data = fake[idx]*mask+(1-mask)*context_conditioned[idx]
 
-            '''
+
             # Classify all fake batch with D (din't forget to detach because you just optimize discrimantor)
             output = netD(fake.detach())
             # Calculate D's loss on the all-fake batch
             errD_fake =  advs_criterion( sig(output[:, 0].view(-1)), label)
             # Calculate the gradients for this batch
             errD_fake.backward()
+
             D_G_z1 = output[:,0].view(-1).mean().item()
             # Add the gradients from the all-real and all-fake batches
             errD = errD_real + errD_fake
@@ -186,6 +189,8 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
             errG = advs_criterion(sig(output[:, 0].view(-1)), label) #+ classification_criterion(output[1:], class_labels)
             # Calculate gradients for G
             errG.backward()
+
+
             D_G_z2 = output[:,0].view(-1).mean().item()
             # Update G
             optimizerG.step()

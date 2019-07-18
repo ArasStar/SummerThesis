@@ -54,16 +54,15 @@ else:
     print("CUDA didn't work")
     device = torch.device('cpu')
 
-def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH,
+def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH,learning_rate=0.0001,
                                                         root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH):
 
 
-    learning_rate=0.0001
+
     #after patch transformation
     transform= transforms.Compose([             transforms.Resize((resize,resize)),transforms.ToTensor(),
-                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
+                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0))
+                                                ,transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     model=models.densenet121(num_classes = 5)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion =nn.BCEWithLogitsLoss(pos_weight=chexpert_load.load_posw()).to(device=device)
@@ -74,26 +73,26 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
 
 
     if pre_trained_PATH :
-        loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH, kwargs=kwargs, model=model,  plot_loss=plot_loss  )
+        loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH, kwargs=kwargs, model=model,  plot_loss=plot_loss, use_cuda=use_cuda  )
         file_name , optimizer ,plot_loss  = loader()
 
     elif from_checkpoint :
-        loader = load_model.Load_Model(method="TL",from_checkpoint = from_checkpoint, kwargs=kwargs, model=model,  plot_loss=plot_loss  )
+        loader = load_model.Load_Model(method="TL",from_checkpoint = from_checkpoint, kwargs=kwargs, model=model,  plot_loss=plot_loss, use_cuda=use_cuda  )
         file_name , optimizer , plot_loss  = loader()
 
     else:
         print("training from scratch")
         file_name = "from_scratch_epoch"+str(num_epochs)+"_batch"+str(batch_size)+"_learning_rate"+str(learning_rate)+".tar"
 
+    file_name= "data_rate"+str(data_rate)+"_"+file_name if data_rate != 1 else file_name
 
     saved_model_PATH = saved_model_PATH+"saved_models/transfer_learning/"+file_name[:-4]
     if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
 
     labels_path = root_PATH+"SummerThesis/code/custom_lib/chexpert_load/labels.pt"
-    cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH +"SummerThesis/code/custom_lib/chexpert_load/train.csv",transform,
-                                                                    kwarg_Common["batch_size"],labels_path = labels_path,root_dir= root_PATH_dataset )
+    cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH +"SummerThesis/code/custom_lib/chexpert_load/train.csv",transform, kwarg_Common["batch_size"],
+                                                                        num_workers=5, data_rate =data_rate, labels_path = labels_path, root_dir= root_PATH_dataset )
 
-    print(len(plot_loss))
     currentDT = datetime.datetime.now()
     model=model.to(device=device)
 
@@ -102,7 +101,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
 
     model.train()
     for epoch in range(num_epochs):
-        for i,  (images, labels) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
+        for i,  (images, labels,_) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
 
             images = images.to(device=device,dtype=torch.float)
             labels = labels.to(device=device,dtype=torch.float)
@@ -126,8 +125,8 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
             if i % 200 == 0:
                 plot_loss.append(loss)
             #DELETEEEEE
-
-
+            #break
+        #break
 
     aftertDT = datetime.datetime.now()
     c = aftertDT - currentDT
@@ -144,7 +143,6 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, pre_trained_PA
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':plot_loss}, PATH)
-
 #FINIIIIIISH
 
 schedule=[  {"transfer_learning":0}]
@@ -155,9 +153,18 @@ p = saved_model_PATH +'saved_models/self_supervised/'
 schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 
-schedule=[ { "pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-  ,{ "pre_trained_PATH":p+"Jigsaw_num_epochs6_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs6_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
-
+schedule=[ {"data_rate": 0.2},
+    {"data_rate": 0.2,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+   , {"data_rate": 0.2, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+   , {"data_rate": 0.2, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
+   ,{"data_rate": 0.5},
+      {"data_rate": 0.5,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+      , {"data_rate": 0.5, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+      , {"data_rate": 0.5, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
+      ,{"data_rate": 0.1},
+          {"data_rate": 0.1,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+         , {"data_rate": 0.1, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+         , {"data_rate": 0.1, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}]
 
 for kwargs in schedule:
     transfer_learning(**kwargs)

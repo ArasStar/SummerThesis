@@ -73,13 +73,15 @@ def load_posw(list_classes =  ['Atelectasis', 'Cardiomegaly', 'Consolidation', '
 class CheXpertDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, csv_file, root_dir, transform=None, labels_path=None, list_classes=None ,path="", label_rate= 0.2):
+    def __init__(self, csv_file, root_dir, transform=None, labels_path=None, list_classes=None ,path="", data_rate=1 ,label_rate= 0.2):
 
         #super().__init__()
         self.root_dir = root_dir
         self.transform = transform
         self.list_classes = ['Atelectasis', 'Cardiomegaly', 'Consolidation', 'Edema', 'Pleural Effusion']
         self.observations_frame = pd.read_csv(csv_file)
+        self.observations_frame= self.observations_frame[:round(data_rate*len(self.observations_frame))]
+
         self.observations_frame['patient'] = self.observations_frame.Path.str.split('/',3,True)[2]
         self.observations_frame['study'] = self.observations_frame.Path.str.split('/',4,True)[3]
 
@@ -163,11 +165,11 @@ class CheXpertDataset(Dataset):
 
         return feature_list
 
-def chexpert_load(csv_file_name, transformation, batch_size,labels_path=None,list_classes=None,shuffle=True,root_dir="",label_rate = 0.2):
+def chexpert_load(csv_file_name, transformation, batch_size,labels_path=None,list_classes=None,shuffle=True,root_dir="",data_rate=1,label_rate = 0.2, num_workers=0):
 
     cheXpert_dataset = CheXpertDataset(csv_file=csv_file_name,
-                                       root_dir=root_dir, transform=transformation, labels_path=labels_path, list_classes=list_classes, label_rate=label_rate)
+                                       root_dir=root_dir, transform=transformation, labels_path=labels_path, list_classes=list_classes, data_rate=data_rate, label_rate=label_rate)
 
-    dataloader = DataLoader(cheXpert_dataset, batch_size=batch_size, shuffle=shuffle)
+    dataloader = DataLoader(cheXpert_dataset, batch_size=batch_size, shuffle=shuffle,num_workers=num_workers)
 
     return cheXpert_dataset, dataloader
