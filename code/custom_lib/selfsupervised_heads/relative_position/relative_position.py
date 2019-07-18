@@ -7,7 +7,7 @@ import matplotlib.patches as patches4rectangle
 
 
 class Relative_Position(object):
-    def __init__(self, image_batch, split,transform=None, show=False, labels_path="/home/aras/Desktop/SummerThesis/code/custom_lib/patch/rel_pos_labels.png"):
+    def __init__(self, image_batch, split,transform=None, show=False, labels_path="/home/aras/Desktop/"):
         self.bs, _, self.h, self.w = image_batch.shape
         self.split = split  # 3x3 or 2x2 grid
         self.i_row = round(self.h / self.split)
@@ -15,7 +15,7 @@ class Relative_Position(object):
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
         self.transform = transform
-        self.labels_path = labels_path
+        self.labels_path = labels_path+"SummerThesis/code/custom_lib/selfsupervised_heads/relative_position/rel_pos_labels.png"
 
     def __call__(self):
         patches = torch.Tensor()

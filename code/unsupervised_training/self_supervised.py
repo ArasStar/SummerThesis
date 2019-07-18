@@ -29,8 +29,8 @@ root_PATH_dataset = "/vol/gpudata/ay1218/"
 root_PATH = "/homes/ay1218/Desktop/"
 
 #coomment out  below for local comp
-root_PATH = "/home/aras/Desktop/"
-root_PATH_dataset = root_PATH
+#root_PATH = "/home/aras/Desktop/"
+#root_PATH_dataset = root_PATH
 saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
@@ -48,7 +48,7 @@ if use_cuda and torch.cuda.is_available():
     print("using CUDA")
     device = torch.device('cuda:0')
 else:
-    print("CUDA didn't work")
+    print("CUDA didn't work, runing in cpu")
     device = torch.device('cpu')
 
 
@@ -66,21 +66,21 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
 
   #after patch transformation
-  '''
   transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
   '''
   transform_after_patching= transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
                                                  transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+  '''
 
   #constant vars
   kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
-  kwarg_Relative_Position = {"split":split,"transform":transform_after_patching,"show":show}
+  kwarg_Relative_Position = {"split":split,"transform":transform_after_patching,"show":show,"labels_path":root_PATH}
   kwarg_Common ={"num_epochs":num_epochs,"learning_rate":learning_rate, "batch_size":batch_size}
   kwargs={"Common": kwarg_Common,"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position}
 
-  loader = load_model.Load_Model(method=method, combo=combo, from_checkpoint =from_checkpoint, kwargs=kwargs, model=model, plot_loss=plot_loss  )
+  loader = load_model.Load_Model(method=method, combo=combo, from_checkpoint =from_checkpoint, kwargs=kwargs, model=model, plot_loss=plot_loss ,use_cuda=use_cuda )
 
   file_name , head_arch , plot_loss  = loader()
   n_heads= len(head_arch)
@@ -94,6 +94,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
                                                                   transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset)
 
 
+  print("device", device)
   model=model.to(device=device)
   model.train()
   currentDT = datetime.datetime.now()
@@ -137,6 +138,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
         if show:
           print("showa giriyooor",show)
           i = 100000000
+      #break
 
 
   print('training done')
@@ -147,7 +149,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   print(mins,"mins ", sec,"secs")
 
   print('END--',file_name)
-
+#'''
   PATH =  saved_model_PATH+"/"+file_name
 
   head_name_list = [head["head_name"]  for head in head_arch]
@@ -165,7 +167,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   curves.plot_loss(plot_loss=plot_loss)
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
-
+#'''
 
 '''
 method="relative_position"
@@ -207,10 +209,9 @@ schedule=[ {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_
           ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
 
-schedule=[{"method":"Jigsaw","num_epochs":3,"grid_crop_size":225,"patch_crop_size":70},
-          {"method":"Jigsaw","num_epochs":3,"grid_crop_size":225,"patch_crop_size":75},
-          {"method":"Jigsaw","num_epochs":3,"grid_crop_size":64*3,"patch_crop_size":64},
-          {"method":"Jigsaw","num_epochs":3,"grid_crop_size":96*3,"patch_crop_size":96}]
+schedule=[
+          {"method":"Relative_Position","split":3.0,"show":True},
+          {"method":"Relative_Position","split":2.0,"show":True}]
 
 
 for kwargs in schedule:

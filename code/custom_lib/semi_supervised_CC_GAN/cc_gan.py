@@ -48,28 +48,22 @@ class Generator(torch.nn.Module):
         a Tensor of output data. We can use Modules defined in the constructor as
         well as arbitrary operators on Tensors.
         """
-        x = F.ReLu(self.bn1(self.conv_layer1(context_x)))
-        x = F.ReLu(self.bn2(self.conv_layer2(x)))
+        x = F.relu(self.bn1(self.conv_layer1(context_x)))
+        x = F.relu(self.bn2(self.conv_layer2(x)))
 
         #putting the conditioning
         assert(x.shape[2]==lowres_x.shape[2]), "dimensions not matching between conv img and lowres img "+str(x.shape)+"--"+str(lowres_x.shape)
-        x=torch.cat((x,lowres_x))
 
         x = torch.stack([torch.cat((x_i,lowres_x[i]))
             for i, x_i in enumerate(torch.unbind(x, dim=0))], dim=0)
 
-        x = nn.ReLu(self.bn3(self.conv_layer3(x)))
-        x = nn.ReLu(self.bn4(self.conv_layer4(x)))
-        x = nn.ReLu(self.bn5(self.upconv_layer5(x)))
-        x = nn.ReLu(self.bn6(self.upconv_layer6(x)))
-        x = nn.ReLu(self.bn7(self.upconv_layer7(x)))
-        x = nn.Tanh(self.bn8(self.upconv_layer8(x)))
+        x = F.relu(self.bn3(self.conv_layer3(x)))
+        x = F.relu(self.bn4(self.conv_layer4(x)))
+        x = F.relu(self.bn5(self.upconv_layer5(x)))
+        x = F.relu(self.bn6(self.upconv_layer6(x)))
+        x = F.relu(self.bn7(self.upconv_layer7(x)))
+        x = torch.tanh(self.bn8(self.upconv_layer8(x)))
 
-        size = cord[0]
-        for i, x_i in enumerate(x):
-            row= cord[1][i][0]
-            col= cord[1][i][1]
-            context_x[i,:,row:row+size,col:col+size] =  x_i[:,row:row+size,col:col+size]
 
         return context_x
 
@@ -99,19 +93,17 @@ class Patcher_CC_GAN(object):
         self.device = torch.device('cuda:0') if gpu else torch.device('cpu')
         self.show = show  # print cropped images and show where they are 1 time for each batch
 
-        self.hole_size = self.h / 2 if hole_size=="" else hole_size
-        self.transform = transforms
+        self.hole_size = int(self.h / 2) if hole_size=="" else hole_size
+        self.transform = transform
 
 
     def __call__(self):
-
         cropped_images = torch.Tensor()
-        low_res_images=F.interpolate(self.image_batch[:,0], scale_factor= 1.0/4, mode='bilinear').view(self.bs,1,self.h/4,self.h/4)
+        low_res_images=F.interpolate(self.image_batch[:,0].view(self.bs,1,self.h,self.h), scale_factor= 1.0/4, mode='bilinear').view(self.bs,1,int(self.h/4),int(self.h/4))
         shift_row_col=[]
 
         for idx, image in enumerate(self.image_batch):
-
-            cropped_image , crop ,shiftrow ,shiftcol = random_hole(self, image, self.hole_size)
+            cropped_image , crop ,shiftrow ,shiftcol = self.random_hole( image, self.hole_size)
             shift_row_col.append([shiftrow,shiftcol])
 
             if idx == 1 and self.show:
@@ -121,7 +113,7 @@ class Patcher_CC_GAN(object):
                  cropped_image = self.transform(cropped_image)
                  #low_res_images = self.transform(low_res_images)
 
-            cropped_images = torch.cat((cropped_images, cropped_image))
+            cropped_images = torch.cat((cropped_images, cropped_image.view(1,3,self.h,self.h)))
 
         return cropped_images , low_res_images ,[self.hole_size, shift_row_col]   #,crops
 
@@ -131,7 +123,7 @@ class Patcher_CC_GAN(object):
 
         crop = image[:, shiftrow:shiftrow + hole_size, shiftcol:shiftcol + hole_size]
 
-        image[:, shiftrow:shiftrow + hole_size, shiftcol:shiftcol + hole_size] = torch.zeros(hole_size,hole_size)
+        image[:,  shiftrow:shiftrow + hole_size, shiftcol:shiftcol + hole_size] = torch.zeros(hole_size,hole_size)
 
         return image , crop ,shiftrow ,shiftcol
 

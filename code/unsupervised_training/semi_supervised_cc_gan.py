@@ -20,6 +20,7 @@ import torchvision.utils as vutils
 import datetime
 import sys
 
+torch.autograd.set_detect_anomaly(True)
 saved_model_PATH="/vol/bitbucket/ay1218/"
 
 root_PATH_dataset = "/vol/gpudata/ay1218/"
@@ -132,12 +133,15 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
             index_list=[]
             for i,l in enumerate(label_ok):
                 if l==1: index_list.append(i)
-            index_list = torch.tensor(index_list)
-            errD_real = advs_criterion( sig(output[:, 0].view(-1)), label) + (classification_criterion(torch.index_select(output[:,1:],0,index_list), torch.index_select(class_labels,0,index_list))
-                                                                             if index_list.nelement() == 0 else 0)
+            #index_list = torch.tensor(index_list)
+            if index_list:
+                errD_real = advs_criterion( sig(output[:, 0].view(-1)), label) + classification_criterion(output[:,1:][index_list,:],class_labels[index_list,:])
+            else:
+                print("noo index_list",index_list)
+                errD_real = advs_criterion( sig(output[:, 0].view(-1)), label)
             # Calculate gradients for D in backward pass
             errD_real.backward()
-            D_x = output[:,0].mean().item()
+            D_x = output[:,0].view(-1).mean().item()
 
             ## Train with all-fake batch
             # Generate batch of latent vectors (context conditioned in our case)
@@ -146,13 +150,21 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
             # Generate fake image batch with G
             fake = netG(context_conditioned,low_res,cord)
             label.fill_(fake_label)
+
+
+            size = cord[0]
+            for i, x_i in enumerate(fake):
+                row= cord[1][i][0]
+                col= cord[1][i][1]
+                context_conditioned[i,:,row:row+size,col:col+size] =  x_i[:,row:row+size,col:col+size]
+
             # Classify all fake batch with D
-            output = netD(fake).view(-1)
+            output = netD(context_conditioned)
             # Calculate D's loss on the all-fake batch
-            errD_fake =  advs_criterion(output[:,0], label) #+ classification_criterion(output[1:], class_labels)
+            errD_fake =  advs_criterion( sig(output[:, 0].view(-1)), label)
             # Calculate the gradients for this batch
             errD_fake.backward()
-            D_G_z1 = output[:,0].mean().item()
+            D_G_z1 = output[:,0].view(-1).mean().item()
             # Add the gradients from the all-real and all-fake batches
             errD = errD_real + errD_fake
             # Update D
@@ -164,9 +176,9 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16, from_che
             netG.zero_grad()
             label.fill_(real_label)  # fake labels are real for generator cost
             # Since we just updated D, perform another forward pass of all-fake batch through D
-            output = netD(fake).view(-1)
+            output = netD(fake)
             # Calculate G's loss based on this output
-            errG = advs_criterion(output[:, 0], label) #+ classification_criterion(output[1:], class_labels)
+            errG = advs_criterion(output[:, 0].view(-1), label) #+ classification_criterion(output[1:], class_labels)
             # Calculate gradients for G
             errG.backward()
             D_G_z2 = output[:,0].mean().item()

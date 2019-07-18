@@ -7,7 +7,7 @@ import matplotlib.patches as patches4rectangle
 
 class Jigsaw(object):
     def __init__(self, image_batch,perm_set_size, path_permutation_set, grid_crop_size=255, patch_crop_size=64, gpu=True, show=False,transform= None):
-
+        print("gpu",gpu)
         self.bs, _, self.h, self.w = image_batch.shape
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
@@ -211,7 +211,7 @@ class Basic_Head(torch.nn.Module):
             tile_stacked = torch.cat((tile_stacked,tile)).to(device = self.device)
           return tile_stacked
 
-        x = torch.stack([stack_tiles(x[idx:idx+9,:]) for idx in range(0,N,9)], dim=0).to(device=self.device)
+        x = torch.stack([stack_tiles(x[idx:idx+9,:].to(device=self.device)) for idx in range(0,N,9)], dim=0).to(device=self.device)
 
         #linear output with 8 outpts(directions)
         y_pred = self.classifier(x)
