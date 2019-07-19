@@ -35,7 +35,7 @@ class Validation(object):
 
         self.model.eval()
         with torch.no_grad():
-            for images, labels in valid_dataloader:
+            for images, labels,_ in valid_dataloader:
 
                 images = images.to(device = self.device)
                 labels = labels.to(device = self.device)
