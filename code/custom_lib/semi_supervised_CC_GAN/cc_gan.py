@@ -116,7 +116,7 @@ class Patcher_CC_GAN(object):
 
 
     def __call__(self):
-        cropped_images = torch.Tensor()
+        cropped_images = torch.Tensor().to(self.device)
         low_res_images= F.interpolate(self.image_batch[:,0].view(self.bs,1,self.h,self.h), scale_factor= 1.0/4, mode='bilinear').view(self.bs,1,int(self.h/4),int(self.h/4))
         shift_row_col=[]
 
@@ -131,9 +131,9 @@ class Patcher_CC_GAN(object):
                  cropped_image = self.transform(cropped_image)
                  #low_res_images = self.transform(low_res_images)
 
-            cropped_images = torch.cat((cropped_images, cropped_image.view(1,3,self.h,self.h)))
+            cropped_images = torch.cat((cropped_images, cropped_image.view(1,3,self.h,self.h).to(device=self.device)))
 
-        return cropped_images , low_res_images ,[self.hole_size, shift_row_col]   #,crops
+        return cropped_images, low_res_images.to(device=self.device)  ,[self.hole_size, shift_row_col]   #,crops
 
 
     def random_hole(self, image):

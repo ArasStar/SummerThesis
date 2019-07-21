@@ -112,7 +112,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
         labels = labels.to(device=device, dtype=torch.long)
 
         #break
-        outputs = model(patches)                                # Forward pass: compute the output class given a image
+        outputs = model(patches)                          # Forward pass: compute the output class given a image
 
         loss = criterion(outputs, labels)                 # Compute the loss: difference between the output class and the pre-given label
         optimizer.zero_grad()                             # Intialize the hidden weight to all zeros

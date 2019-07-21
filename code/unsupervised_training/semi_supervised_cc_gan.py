@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+import torchvision.utils as vutils
 #MODELS
 import re
 import torch.nn as nn
@@ -16,9 +17,11 @@ import torch.nn.functional as F
 import torchvision.models as models
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
-
+import matplotlib.animation as animation
 import datetime
 import sys
+
+from IPython.display import HTML
 
 torch.autograd.set_detect_anomaly(True)
 saved_model_PATH="/vol/bitbucket/ay1218/"
@@ -44,14 +47,14 @@ import chexpert_load
 import load_model
 import cc_gan
 
-use_cuda = False
+use_cuda = True
 if use_cuda and torch.cuda.is_available():
     print("using CUDA")
     device = torch.device('cuda:0')
 else:
     print("CUDA didn't work,using cpu")
     device = torch.device('cpu')
-
+print(device)
 
 def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1, from_checkpoint=None, from_Pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
 
@@ -60,7 +63,7 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
     kwargs={"Common":kwarg_Common}
 
     #just ToTensor before patch
-    transform_train= transforms.Compose([ transforms.RandomCrop(320), transforms.RandomHorizontalFlip(), transforms.ToTensor(),transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
+    transform_train= transforms.Compose([ transforms.Resize((320,320)), transforms.RandomHorizontalFlip(), transforms.ToTensor(),transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
 
 
     #after patch transformation
@@ -70,6 +73,26 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
     labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/labels.pt"
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/train.csv",
                                                                      transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset)
+
+    #just to check how well G outputs ,no training in this
+    _, valid_dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/valid.csv",
+                                                                                 transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset)
+    fixed_noise = torch.randn(batch_size,100,1, 1)
+
+
+
+    # Plot some training images
+    '''
+    real_batch = next(iter(dataloader))
+    real_batch2 = next(iter(dataloader))
+
+    plt.figure(figsize=(8,4))
+    plt.axis("off")
+    plt.title("Training Images")
+    plt.imshow(np.transpose(vutils.make_grid(torch.cat((real_batch[0].to(device)[:64],real_batch2[0].to(device)[:64])), padding=2, normalize=True).cpu(),(1,2,0)))
+    plt.show()
+    '''
+
     netD = cc_gan.Discriminator()
     netG = cc_gan.Generator(noise=noised)
     G_losses = []
@@ -107,6 +130,8 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
 
 
     img_list = []
+    img_list2 = []
+
     currentDT = datetime.datetime.now()
     netD.to(device)
     netG.to(device)
@@ -132,25 +157,25 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
 
             #gathering labeled ones for classification supervision
             index_list=[]
-            for i,l in enumerate(label_ok):
-                if l==1: index_list.append(i)
+            for i_,l in enumerate(label_ok):
+                if l==1: index_list.append(i_)
             #index_list = torch.tensor(index_list)
             if index_list:
                 errD_real = advs_criterion( sig(output[:, 0].view(-1)), label) + classification_criterion(output[index_list,1:] ,class_labels[index_list,:])
             else:
-                print("noo index_list",index_list)
+                print(i,"noo index_list",index_list)
                 errD_real = advs_criterion( sig(output[:, 0].view(-1)), label)
 
             # Calculate gradients for D in backward pass
             errD_real.backward()
-            D_x = output[:,0].view(-1).mean().item()
+            D_x = sig(output[:,0].view(-1)).mean().item()
 
             ## Train with all-fake batch
             # Generate batch of latent vectors (context conditioned in our case)
             patcher = cc_gan.Patcher_CC_GAN(real_images,**kwargs_cc_gan_patch)#, transform = transform_after_patching)
             context_conditioned,low_res ,cord = patcher()
             # Generate fake image batch with G
-            noise = torch.randn(batch_size,100,1, 1)
+            noise = torch.randn(batch_size,100,1, 1).to(device=device)
             fake = netG(context_conditioned,low_res,cord,noise)
             label.fill_(fake_label)
 
@@ -158,9 +183,9 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
             '''PROBLEEEEEEm'''
             hole_size = cord[0]
             for idx , f_i in enumerate(fake):
-                mask=torch.zeros(320,320)
-                row = cord[1][i][0]
-                col = cord[1][i][1]
+                mask=torch.zeros(320,320).to(device=device)
+                row = cord[1][idx][0]
+                col = cord[1][idx][1]
                 mask[row:row+hole_size,col:col+hole_size]=1
                 fake[idx].data = fake[idx]*mask+(1-mask)*context_conditioned[idx]
 
@@ -172,7 +197,7 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
             # Calculate the gradients for this batch
             errD_fake.backward()
 
-            D_G_z1 = output[:,0].view(-1).mean().item()
+            D_G_z1 = sig(output[:,0].view(-1)).mean().item()
             # Add the gradients from the all-real and all-fake batches
             errD = errD_real + errD_fake
             # Update D
@@ -191,13 +216,13 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
             errG.backward()
 
 
-            D_G_z2 = output[:,0].view(-1).mean().item()
+            D_G_z2 = sig(output[:,0].view(-1)).mean().item()
             # Update G
             optimizerG.step()
 
 
 
-            print("breaking");break
+            #print("breaking");break
 
             # Output training stats
             if i % 100 == 0:
@@ -215,14 +240,48 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
                 G_losses.append(errG.item())
                 D_losses.append(errD.item())
 
-            '''
+
             # Check how the generator is doing by saving G's output on fixed_noise
-            if ((epoch == num_epochs-1) and (i == len(dataloader)-1)):
+            if (i % 100 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
+
+                valid_batch = next(iter(valid_dataloader))[0]
+                valid_batch2 = next(iter(valid_dataloader))[0]
+
+                patcher = cc_gan.Patcher_CC_GAN(valid_batch,**kwargs_cc_gan_patch)#, transform = transform_after_patching)
+                context_conditioned,low_res ,cord = patcher()
+
+                patcher2 = cc_gan.Patcher_CC_GAN(valid_batch2,**kwargs_cc_gan_patch)#, transform = transform_after_patching)
+                context_conditioned2,low_res2 ,cord2 = patcher()
+
+
+                break
+
+                # Generate fake image batch with G
 
                 with torch.no_grad():
-                    fake = netG(fixed_noise).detach().cpu()
-                img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
-            '''
+
+                    netG.eval()
+                    fake = netG(context_conditioned,low_res,cord,fixed_noise).detach().cpu()
+                    fake2 = netG(context_conditioned2,low_res2,cord2,fixed_noise).detach().cpu()
+                    netG.train()
+
+                img_list.append(vutils.make_grid(torch.cat((fake,fake2)), padding=2, normalize=True))
+                hole_size = cord[0]
+                hole_size2 = cord2[0]
+
+                for idx , f_i in enumerate(fake):
+                    mask=torch.zeros(320,320)
+                    mask2=torch.zeros(320,320)
+
+                    row = cord[1][idx][0];row2 = cord2[1][idx][0]
+                    col = cord[1][idx][1];col2 = cord2[1][idx][1]
+                    mask[row:row+hole_size,col:col+hole_size]=1
+                    mask2[row2:row2+hole_size2,col2:col2+hole_size2]=1
+
+                    fake[idx].data = fake[idx]*mask+(1-mask)*context_conditioned[idx]
+                    fake2[idx].data = fake2[idx]*mask2+(1-mask2)*context_conditioned2[idx]
+                img_list2.append(vutils.make_grid(torch.cat((fake,fake2)), padding=2, normalize=True))
+
 
     print('training done')
     aftertDT = datetime.datetime.now()
@@ -232,6 +291,31 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
     print('END--',file_name)
 
     PATH =  saved_model_PATH+"/"+file_name
+
+    plt.figure(figsize=(15,5))
+    plt.title("Generator and Discriminator Loss During Training")
+    plt.plot(G_losses,label="G")
+    plt.plot(D_losses,label="D")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+
+    #plt.savefig(PATH+'/'+'plot_loss_'+ '.png')
+
+    fig = plt.figure(figsize=(8,8))
+    plt.axis("off")
+    ims = [[plt.imshow(np.transpose(i,(1,2,0)), animated=True)] for i in img_list]
+    ani = animation.ArtistAnimation(fig, ims, interval=1000, repeat_delay=1000, blit=True)
+
+    HTML(ani.to_jshtml())
+
+
+
+
+
+    plt.show()
+
+
 
     head_name_list = [head["head_name"]  for head in head_arch]
     head_state_list = [head["head"].state_dict()  for head in head_arch]
@@ -249,16 +333,7 @@ def train_ccgan(method="CC_GAN",num_epochs=3, lr=0.0002, batch_size=16,noised=1,
     #torch.save(model.state_dict(), PATH)
     print('saved  model(model,optim,loss, epoch)')
 
-    plt.figure(figsize=(15,5))
-    plt.title("Generator and Discriminator Loss During Training")
-    plt.plot(G_losses,label="G")
-    plt.plot(D_losses,label="D")
-    plt.xlabel("iterations")
-    plt.ylabel("Loss")
-    plt.legend()
 
-    #plt.savefig(PATH+'/'+'plot_loss_'+ '.png')
-    plt.show()
 
 
 

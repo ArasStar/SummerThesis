@@ -86,6 +86,8 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
 
     file_name= "data_rate"+str(data_rate)+"_"+file_name if data_rate != 1 else file_name
 
+
+
     saved_model_PATH = saved_model_PATH+"saved_models/transfer_learning/"+file_name[:-4]
     if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
 
@@ -153,18 +155,18 @@ p = saved_model_PATH +'saved_models/self_supervised/'
 schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 
-schedule=[ {"data_rate": 0.2},
-    {"data_rate": 0.2,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-   , {"data_rate": 0.2, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-   , {"data_rate": 0.2, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
-   ,{"data_rate": 0.5},
-      {"data_rate": 0.5,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-      , {"data_rate": 0.5, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-      , {"data_rate": 0.5, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
-      ,{"data_rate": 0.1},
-          {"data_rate": 0.1,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-         , {"data_rate": 0.1, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-         , {"data_rate": 0.1, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}]
+schedule=[ {"num_epochs":15 ,"data_rate": 0.2},
+    {"num_epochs":15 ,"data_rate": 0.2,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+   , {"num_epochs":15 ,"data_rate": 0.2, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+   , {"num_epochs":15 ,"data_rate": 0.2, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
+   ,{"num_epochs":6 ,"data_rate": 0.5},
+      {"num_epochs":6 ,"data_rate": 0.5,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+      , {"num_epochs":6 ,"data_rate": 0.5, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+      , {"num_epochs":6 ,"data_rate": 0.5, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
+      ,{"num_epochs":30 ,"data_rate": 0.1},
+          {"num_epochs":30 ,"data_rate": 0.1,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+         , {"num_epochs":30 ,"data_rate": 0.1, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+         , {"num_epochs":30 ,"data_rate": 0.1, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}]
 
 for kwargs in schedule:
     transfer_learning(**kwargs)
