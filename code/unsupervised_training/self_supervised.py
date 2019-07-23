@@ -31,7 +31,7 @@ root_PATH = "/homes/ay1218/Desktop/"
 #coomment out  below for local comp
 #root_PATH = "/home/aras/Desktop/"
 #root_PATH_dataset = root_PATH
-saved_model_PATH=root_PATH
+#saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
@@ -91,7 +91,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
   labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt"
   cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train.csv",
-                                                                  transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset)
+                                                                  transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, num_workers=5)
 
 
   print("device", device)
@@ -99,6 +99,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   model.train()
   currentDT = datetime.datetime.now()
   print('START--',file_name)
+
   for epoch in range(num_epochs):
       for i,  (images, observations,_) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
 
@@ -151,7 +152,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   print('END--',file_name)
 #'''
   PATH =  saved_model_PATH+"/"+file_name
-
+  '''
   head_name_list = [head["head_name"]  for head in head_arch]
   head_state_list = [head["head"].state_dict()  for head in head_arch]
   optimizer_state_list=[head['optimizer'].state_dict()  for head in head_arch]
@@ -165,6 +166,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
   curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(model_name=file_name,root_PATH= saved_model_PATH,mode="just_plot_loss")
   curves.plot_loss(plot_loss=plot_loss)
+  '''
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
 #'''
@@ -209,7 +211,7 @@ schedule=[ {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_
           ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
 
-schedule=[
+schedule=[{"method":"Jigsaw","num_epochs":3},
           {"method":"Relative_Position","split":3.0,"show":True},
           {"method":"Relative_Position","split":2.0,"show":True}]
 

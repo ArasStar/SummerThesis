@@ -6,8 +6,8 @@ import matplotlib.patches as patches4rectangle
 
 
 class Jigsaw(object):
-    def __init__(self, image_batch,perm_set_size, path_permutation_set, grid_crop_size=255, patch_crop_size=64, gpu=True, show=False,transform= None):
-        print("gpu",gpu)
+    def __init__(self, image_batch,perm_set_size, path_permutation_set, grid_crop_size=255, patch_crop_size=64, gpu=False, show=False,transform= None):
+
         self.bs, _, self.h, self.w = image_batch.shape
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch

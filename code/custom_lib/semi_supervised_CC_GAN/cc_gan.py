@@ -10,7 +10,7 @@ import modified_densenet
 
 class Generator(torch.nn.Module):
     #generator inspire by DCGAN generator
-    def __init__(self, D_in=3, noise=0):
+    def __init__(self, D_in=1, noise=0,noise_k_size=8):
         """
         In the constructor we instantiate two nn.Linear modules and assign them as
         member variables.
@@ -35,7 +35,7 @@ class Generator(torch.nn.Module):
         self.bn4 = nn.BatchNorm2d( ngf*8)
 
 
-        self.noise_upconv = nn.ConvTranspose2d( 100, ngf*8, kernel_size=20)
+        self.noise_upconv = nn.ConvTranspose2d( 100, ngf*8, kernel_size=noise_k_size)
         self.bn_noise = nn.BatchNorm2d( ngf*8)
 
         self.upconv_layer5 = nn.ConvTranspose2d( (1+self.noise)*ngf*8,  ngf*4, kernel_size=4, stride=2,padding=1)
@@ -49,6 +49,10 @@ class Generator(torch.nn.Module):
 
         self.upconv_layer8 = nn.ConvTranspose2d(ngf, D_in, kernel_size=4, stride=2, padding=1)
         self.bn8 = nn.BatchNorm2d(D_in)
+
+        for m in self.modules():
+            if isinstance(m,(nn.Conv2d,nn.ConvTranspose2d)):
+                nn.init.xavier_uniform_(m.weight,gain=nn.init.calculate_gain('relu'))
 
 
     def forward(self,context_x, lowres_x, cord, noise=0):
@@ -97,6 +101,10 @@ class Discriminator(torch.nn.Module):
 
         #Densenet with relu s replaced with leaky relu
         self.discriminator = modified_densenet.densenet121(num_classes=6, pretrained=pretrained)
+        if not pretrained :
+            for m in self.discriminator.modules():
+                if isinstance(m,(nn.Conv2d,nn.ConvTranspose2d,nn.Linear)):
+                    nn.init.xavier_uniform_(m.weight,gain=nn.init.calculate_gain('relu'))
 
     def __call__(self,x):
          return self.discriminator(x)
@@ -131,7 +139,7 @@ class Patcher_CC_GAN(object):
                  cropped_image = self.transform(cropped_image)
                  #low_res_images = self.transform(low_res_images)
 
-            cropped_images = torch.cat((cropped_images, cropped_image.view(1,3,self.h,self.h).to(device=self.device)))
+            cropped_images = torch.cat((cropped_images, cropped_image.view(1,1,self.h,self.h).to(device=self.device)))
 
         return cropped_images, low_res_images.to(device=self.device)  ,[self.hole_size, shift_row_col]   #,crops
 
@@ -187,8 +195,21 @@ class Patcher_CC_GAN(object):
 
 
 
+def show(img):
+
+    npimg = img.numpy()
+    fig, ax = plt.subplots(8,8,figsize=(64,64))
+
+    for i in range(8):
+        for j in range(8):
+            pass
 
 
+    plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
+    plt.axis("off")
+
+    fig2, ax2 = plt.subplots(3, 3, sharex='col', sharey='row', figsize=(5, 5))
+    fig2.subplots_adjust(hspace=0, wspace=0)
 
 
 

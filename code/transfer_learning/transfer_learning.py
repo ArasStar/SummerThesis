@@ -31,7 +31,7 @@ root_PATH = "/homes/ay1218/Desktop/"
 
 #root_PATH = "/home/aras/Desktop/"
 #root_PATH_dataset = root_PATH
-saved_model_PATH=root_PATH
+#saved_model_PATH=root_PATH
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
@@ -138,6 +138,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
 
     # Calculating valid error plotting AUC , Precisinon -Recall , plot loss , saving figures, printingg auc differences
     PATH =  saved_model_PATH+"/"+file_name
+    '''
     val = validation.Validation(chexpert_load=chexpert_load,model=model, plot_loss=plot_loss, bs = 16, root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH = saved_model_PATH, file_name=file_name, gpu=use_cuda )
     val()
 
@@ -146,7 +147,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':plot_loss}, PATH)
 #FINIIIIIISH
-
+    '''
 schedule=[  {"transfer_learning":0}]
 
 c = saved_model_PATH +'saved_models/transfer_learning/'
