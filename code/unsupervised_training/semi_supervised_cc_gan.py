@@ -298,12 +298,12 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (i % 4000 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
+            if (i % 3000 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
 
                 # Generate fake image batch with G
                 with torch.no_grad():
-                    fake = netG(fixed_context_conditioned,fixed_low_res,fixed_cord,fixed_noise).detach().cpu()
-                    fake2 = netG(fixed_context_conditioned2,fixed_low_res2,fixed_cord2,fixed_noise).detach().cpu()
+                    fake = netG(fixed_context_conditioned.to(device=device),fixed_low_res,fixed_cord,fixed_noise).detach().cpu()
+                    fake2 = netG(fixed_context_conditioned2.to(device=device),fixed_low_res2,fixed_cord2,fixed_noise).detach().cpu()
 
                 hole_size = fixed_cord[0]
                 hole_size2 = fixed_cord2[0]
