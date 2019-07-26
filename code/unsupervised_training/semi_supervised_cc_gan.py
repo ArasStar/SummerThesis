@@ -331,9 +331,8 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
                 grid=vutils.make_grid(torch.cat((valid_batch,fixed_context_conditioned.cpu(),fake.cpu(),fixed_filled,
                                                         valid_batch2,fixed_context_conditioned2.cpu(), fake2.cpu(),fixed_filled2)).cpu(), padding=2, normalize=True,nrow=8)[0]
+
                 img_list.append(grid)
-
-
 
 
     print('training done')
@@ -368,6 +367,7 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
     ims = [[plt.imshow(img.numpy(), animated=True,cmap='Greys_r')] for img in img_list]
     ani = animation.ArtistAnimation(fig, ims, interval=1000, repeat_delay=1000, blit=True)
+
     ani.save(saved_model_PATH+"/G_during_training.mp4")
 
     torch.save({
@@ -385,8 +385,9 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
     head_name_list = [head["head_name"]  for head in head_arch]
     head_state_list = [head["head"].state_dict()  for head in head_arch]
     optimizer_state_list=[head['optimizer'].state_dict()  for head in head_arch]
+
     '''
-    file1.close()
+    log_file.close()
     print('saved  model(model,optim,loss, epoch)')
 
 #'''(method="relative_position",num_epochs=3, learning_rate=0.0001, batch_size=16,split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=300)'''
