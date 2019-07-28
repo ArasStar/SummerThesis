@@ -10,7 +10,7 @@ import modified_densenet
 
 class Generator(torch.nn.Module):
     #generator inspire by DCGAN generator
-    def __init__(self, D_in=1, noise=0,noise_k_size=8):
+    def __init__(self, D_in=1, noise=0,noise_k_size=8, noise_size=100):
         """
         In the constructor we instantiate two nn.Linear modules and assign them as
         member variables.
@@ -35,7 +35,7 @@ class Generator(torch.nn.Module):
         self.bn4 = nn.BatchNorm2d( ngf*8)
 
 
-        self.noise_upconv = nn.ConvTranspose2d( 100, ngf*8, kernel_size=noise_k_size)
+        self.noise_upconv = nn.ConvTranspose2d( noise_size, ngf*8, kernel_size=noise_k_size)
         self.bn_noise = nn.BatchNorm2d( ngf*8)
 
         self.upconv_layer5 = nn.ConvTranspose2d( (1+self.noise)*ngf*8,  ngf*4, kernel_size=4, stride=2,padding=1)

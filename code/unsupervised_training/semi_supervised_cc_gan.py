@@ -57,10 +57,10 @@ else:
     device = torch.device('cpu')
 print(device)
 
-def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_size=16,noised=1, from_checkpoint=None, from_Pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
+def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_size=16,noised=1, noise_size=100, label_rate=0.2 , num_workers=5, from_checkpoint=None, from_Pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
 
     kwargs_cc_gan_patch ={"show":show, "gpu" : use_cuda}
-    kwarg_Common ={"num_epochs":num_epochs,"learning_rate":lr,"batch_size":batch_size,"resize":resize}
+    kwarg_Common ={"num_epochs":num_epochs,"learning_rate":lr,"batch_size":batch_size,"resize":resize,"label_rate":label_rate}
     kwargs={"Common":kwarg_Common}
 
     #just ToTensor before patch
@@ -75,13 +75,13 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
     labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/labels.pt"
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/train.csv",
-                                                                     transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, num_workers=5)
+                                                                     transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, label_rate=label_rate,num_workers=num_workers)
 
     #just to check how well G outputs ,no training in this
     _, valid_dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/valid.csv",
                                                                                  transform_train,8, labels_path=labels_path,root_dir = root_PATH_dataset,shuffle = False)
 
-    fixed_noise = torch.randn(8,100,1, 1).to(device = device)
+    fixed_noise = torch.randn(8,noise_size,1, 1).to(device = device)
     iter_fixedvalid =iter(valid_dataloader)
     valid_batch = next(iter_fixedvalid)[0]
     valid_batch2 = next(iter_fixedvalid)[0]
@@ -95,7 +95,8 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
 
     netD = cc_gan.Discriminator()
-    netG = cc_gan.Generator(noise=noised,noise_k_size=int(resize/16))
+    netG = cc_gan.Generator(noise=noised, noise_k_size=int(resize/16), noise_size= noise_size)
+
     G_losses = []
     D_losses = []
     C_losses = []
@@ -122,7 +123,7 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
     else:
         print("training GAN from scratch")
-        file_name=method + "".join(["_"+key + str(kwargs["Common"][key]) for key in kwargs["Common"].keys()])+".tar"
+        file_name= method + "".join(["_"+key + str(kwargs["Common"][key]) for key in kwargs["Common"].keys()])+".tar"
 
 
     saved_model_PATH = saved_model_PATH+  "saved_models/semi_supervised/"+ file_name[:-4]
@@ -165,6 +166,7 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
             for i_,l in enumerate(label_ok):
                 if l==1: index_list.append(i_)
             #index_list = torch.tensor(index_list)
+
             if index_list:
                 c_loss = classification_criterion(output[index_list,1:] ,class_labels[index_list,:])
                 errD_real = advs_criterion( sig(output[:, 0].view(-1)), label) + c_loss
@@ -183,13 +185,14 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
             low_res = low_res.to(device=device)
 
             # Generate fake image batch with G
-            noise = torch.randn(bs,100,1, 1).to(device=device)
+            noise = torch.randn(bs,noise_size,1, 1).to(device=device)
             fake = netG(context_conditioned,low_res,cord,noise)
             label.fill_(fake_label)
 
             '''PROBLEEEEEEm'''
-            filled =context_conditioned.clone()
-            filled_fake =context_conditioned.clone()
+            filled =context_conditioned.clone().to(device=device)
+            filled_fake =context_conditioned.clone().to(device=device)
+            fake = fake.to(device=device)
 
             hole_size = cord[0]
             for idx , f_i in enumerate(fake):
@@ -201,54 +204,33 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
                 filled[idx] = torch.where(mask.byte(),fake[idx].clone(),context_conditioned[idx])
 
-            #
-            # if i % 50 == 0:
-            #      #plt.figure("epoch:"+str(epoch)+"iteration_number: "+str(i))
-            #     plt.ion()
-            #
-            #     plt.figure("1")
-            #     plt.imshow(fake[0].detach().cpu().squeeze().numpy(),cmap='Greys_r')
-            #     plt.title("epoch:"+str(epoch)+" iteration_number: "+str(i))
-            #     plt.draw()
-            #
-            #     plt.pause(0.1)
-            #     plt.savefig(root_PATH+ str(i)+"fakeG.png")
-            #
-            #     plt.figure("2")
-            #     plt.imshow(real_images[0,0].detach().cpu().squeeze().numpy(),cmap='Greys_r')
-            #     plt.title("epoch:"+str(epoch)+" iteration_number: "+str(i))
-            #     plt.draw()
-            #
-            #     plt.pause(0.1)
-            #     plt.savefig(root_PATH+str(i)+"real.png")
-            #
-            #     plt.figure("3")
-            #
-            #     plt.imshow(filled[0].detach().cpu().squeeze().numpy(),cmap='Greys_r')
-            #     plt.title("epoch:"+str(epoch)+" iteration_number: "+str(i))
-            #
-            #     plt.draw()
-            #     plt.pause(0.1)
-            #     # at the end call show to ensure window won't close.
-            #     #print('continue computation')
-            #     plt.savefig(root_PATH+str(i)+"filled.png")
+            ##Printing here (commented and carried it to bottom)
+            filled = torch.stack([channel3(f_im) for f_im in filled ]).to(device=device)
 
-
-
-            filled = torch.stack([channel3(f_im) for f_im in filled ])
             # Classify all fake batch with D (din't forget to detach because you just optimize discrimantor)
             output = netD(filled.detach())
-            #output = netD(fake.detach())
 
             # Calculate D's loss on the all-fake batch
-            errD_fake =  advs_criterion( sig(output[:, 0].view(-1)), label)
+            errD_fake =  advs_criterion(sig(output[:, 0].view(-1)), label)
+
             # Calculate the gradients for this batch
             errD_fake.backward()
 
-
             D_G_z1 = sig(output[:,0].view(-1)).mean().item()
-            # Add the gradients from the all-real and all-fake batches
             errD = errD_real + errD_fake
+
+            #if CC-GAN2 then put X_g as an extra negative example
+            errD_fake2=0
+            if method == "CC_GAN2":
+                fake = torch.stack([channel3(f_im) for f_im in fake ]).to(device=device)
+                output2 = netD(fake.detach())
+                errD_fake2 =  advs_criterion( sig(output2[:, 0].view(-1)), label)
+                D_G_z1_2 = sig(output2[:,0].view(-1)).mean().item()
+                errD_fake2.backward()
+                errD = errD + errD_fake2
+
+
+            # Add the gradients from the all-real and all-fake batches
             # Update D
             optimizerD.step()
 
@@ -259,33 +241,44 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
             label.fill_(real_label)  # fake labels are real for generator cost
             # Since we just updated D, perform another forward pass of all-fake batch through D
             output = netD(filled)
-            #output = netD(fake)
-
             # Calculate G's loss based on this output
-            errG = advs_criterion(sig(output[:, 0].view(-1)), label) #+ classification_criterion(output[1:], class_labels)
+            errG = advs_criterion(sig(output[:, 0].view(-1)), label)
             # Calculate gradients for G
-            errG.backward()
+            errG.backward(retain_graph=True)
+
+            #if CC-GAN2 then put X_g as an extra negative example
+            if method == "CC_GAN2":
+                output2 = netD(fake)
+                errG2 = advs_criterion( sig(output2[:, 0].view(-1)), label)
+                D_G_z2_2 = sig(output2[:,0].view(-1)).mean().item()
+                errG2.backward()
+                errG = errG + errG2
+
 
             D_G_z2 = sig(output[:,0].view(-1)).mean().item()
+
             # Update G
             optimizerG.step()
 
             #print("breaking");break
             # Output training stats
             if (i+1) % 100 == 0:
-                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+
+                extra_neg = "" if method != "CC_GAN2" else  '\tD(G(z_G)): %.4f / %.4f' % (D_G_z1_2,D_G_z2_2)
+
+                print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                       % (epoch+1, num_epochs, i+1, len(dataloader),
-                         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
+                         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2) + extra_neg)
 
-                 log_file.write('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                log_file.write('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                       % (epoch+1, num_epochs, i+1, len(dataloader),
-                         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2) + "\n")
+                         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2)+ extra_neg + "\n")
 
 
-                 aftertDT = datetime.datetime.now()
-                 c = aftertDT-currentDT
-                 mins,sec=divmod(c.days * 86400 + c.seconds, 60)
-                 print(mins,"mins ", sec,"secs")
+                aftertDT = datetime.datetime.now()
+                c = aftertDT-currentDT
+                mins,sec=divmod(c.days * 86400 + c.seconds, 60)
+                print(mins,"mins ", sec,"secs")
 
 
             if (i+1) % 200 == 0:
@@ -298,7 +291,7 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (i % 3000 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
+            if (i % 2000 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
 
                 # Generate fake image batch with G
                 with torch.no_grad():
@@ -395,11 +388,13 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"num_epochs":3,"show":False, "resize":128,"batch_size":64},
-            {"num_epochs":3,"show":False, "resize":128,"batch_size":32},
-            {"num_epochs":3,"show":False, "resize":128,"batch_size":16},
-            {"num_epochs":3,"show":False, "resize":320,"batch_size":16}
+            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":64},
+            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":32},
+            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16},
+            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16}
+
             ]
+
 
 
 for kwargs in schedule:
@@ -421,6 +416,37 @@ for kwargs in schedule:
 
 
 
+#
+# if i % 50 == 0:
+#      #plt.figure("epoch:"+str(epoch)+"iteration_number: "+str(i))
+#     plt.ion()
+#
+#     plt.figure("1")
+#     plt.imshow(fake[0].detach().cpu().squeeze().numpy(),cmap='Greys_r')
+#     plt.title("epoch:"+str(epoch)+" iteration_number: "+str(i))
+#     plt.draw()
+#
+#     plt.pause(0.1)
+#     plt.savefig(root_PATH+ str(i)+"fakeG.png")
+#
+#     plt.figure("2")
+#     plt.imshow(real_images[0,0].detach().cpu().squeeze().numpy(),cmap='Greys_r')
+#     plt.title("epoch:"+str(epoch)+" iteration_number: "+str(i))
+#     plt.draw()
+#
+#     plt.pause(0.1)
+#     plt.savefig(root_PATH+str(i)+"real.png")
+#
+#     plt.figure("3")
+#
+#     plt.imshow(filled[0].detach().cpu().squeeze().numpy(),cmap='Greys_r')
+#     plt.title("epoch:"+str(epoch)+" iteration_number: "+str(i))
+#
+#     plt.draw()
+#     plt.pause(0.1)
+#     # at the end call show to ensure window won't close.
+#     #print('continue computation')
+#     plt.savefig(root_PATH+str(i)+"filled.png")
 
 
 

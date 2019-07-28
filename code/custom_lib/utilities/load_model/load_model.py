@@ -206,7 +206,8 @@ class Load_Model(object):
 
         print("tranfering the weights")
         checkpoint = torch.load(self.pre_trained, map_location = self.device)
-        self.model.load_state_dict(checkpoint['model_state_dict'],strict=False) # just features get downloaded classifier stays
+        model_dict = checkpoint['D_model_state_dict'] if self.pre_trained.__contains__("CC_GAN") else checkpoint['model_state_dict']
+        self.model.load_state_dict(model_dict,strict=False) # just features get downloaded classifier stays
         self.optimizer_chex = torch.optim.Adam(self.model.parameters(), lr=self.kwargs["Common"]['learning_rate'])
 
         splited = self.pre_trained.split('/')[-1]

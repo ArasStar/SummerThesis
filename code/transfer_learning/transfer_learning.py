@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 import matplotlib.pyplot as plt
-
+import time
 import datetime
 import sys
 print("hooop")
@@ -54,10 +54,8 @@ else:
     print("CUDA didn't work")
     device = torch.device('cpu')
 
-def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH,learning_rate=0.0001,
+def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH,learning_rate=0.0001,num_workers=5,
                                                         root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH):
-
-
 
     #after patch transformation
     transform= transforms.Compose([             transforms.Resize((resize,resize)),transforms.ToTensor(),
@@ -93,7 +91,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
 
     labels_path = root_PATH+"SummerThesis/code/custom_lib/chexpert_load/labels.pt"
     cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH +"SummerThesis/code/custom_lib/chexpert_load/train.csv",transform, kwarg_Common["batch_size"],
-                                                                        num_workers=5, data_rate =data_rate, labels_path = labels_path, root_dir= root_PATH_dataset )
+                                                                        num_workers=num_workers, data_rate =data_rate, labels_path = labels_path, root_dir= root_PATH_dataset )
 
     currentDT = datetime.datetime.now()
     model=model.to(device=device)
@@ -138,7 +136,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
 
     # Calculating valid error plotting AUC , Precisinon -Recall , plot loss , saving figures, printingg auc differences
     PATH =  saved_model_PATH+"/"+file_name
-    '''
+
     val = validation.Validation(chexpert_load=chexpert_load,model=model, plot_loss=plot_loss, bs = 16, root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH = saved_model_PATH, file_name=file_name, gpu=use_cuda )
     val()
 
@@ -147,27 +145,28 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss':plot_loss}, PATH)
 #FINIIIIIISH
-    '''
+
 schedule=[  {"transfer_learning":0}]
 
 c = saved_model_PATH +'saved_models/transfer_learning/'
 p = saved_model_PATH +'saved_models/self_supervised/'
-
+s=  saved_model_PATH +'saved_models/semi_supervised/'
 schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 
-schedule=[ {"num_epochs":15 ,"data_rate": 0.2},
-    {"num_epochs":15 ,"data_rate": 0.2,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-   , {"num_epochs":15 ,"data_rate": 0.2, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-   , {"num_epochs":15 ,"data_rate": 0.2, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
-   ,{"num_epochs":6 ,"data_rate": 0.5},
-      {"num_epochs":6 ,"data_rate": 0.5,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-      , {"num_epochs":6 ,"data_rate": 0.5, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-      , {"num_epochs":6 ,"data_rate": 0.5, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
-      ,{"num_epochs":30 ,"data_rate": 0.1},
-          {"num_epochs":30 ,"data_rate": 0.1,"pre_trained_PATH":p+"naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination_Relative_Position_Jigsaw__num_epochs6_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-         , {"num_epochs":30 ,"data_rate": 0.1, "pre_trained_PATH":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-         , {"num_epochs":30 ,"data_rate": 0.1, "pre_trained_PATH": p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}]
+schedule=[{"data_rate": 0.2,"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
+        ,{"data_rate": 0.2, "pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
+        , {"data_rate": 0.2, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"},
+        {"data_rate": 0.2, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"},
+        {"data_rate": 0.5,"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
+        ,{"data_rate": 0.5, "pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
+        , {"data_rate": 0.5, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"},
+        {"data_rate": 0.5, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"}]
+
+#min = 60
+#time.sleep(100*min)
+
 
 for kwargs in schedule:
+
     transfer_learning(**kwargs)
