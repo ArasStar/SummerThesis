@@ -388,10 +388,8 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":64},
-            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":32},
-            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16},
-            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16}
+            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
+            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
 
             ]
 
