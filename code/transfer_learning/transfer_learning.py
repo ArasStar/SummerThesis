@@ -60,7 +60,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
     #after patch transformation
     transform= transforms.Compose([             transforms.Resize((resize,resize)),transforms.ToTensor(),
                                                 transforms.Lambda(lambda x: torch.cat([x, x, x], 0))
-                                                ,transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                                ])#,transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     model=models.densenet121(num_classes = 5)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion =nn.BCEWithLogitsLoss(pos_weight=chexpert_load.load_posw()).to(device=device)
@@ -156,12 +156,18 @@ schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.00
 
 schedule=[{"data_rate": 0.2,"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
         ,{"data_rate": 0.2, "pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
-        , {"data_rate": 0.2, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"},
-        {"data_rate": 0.2, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"},
-        {"data_rate": 0.5,"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
+        ,{"data_rate": 0.2, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"}
+        ,{"data_rate": 0.2, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"}
+
+        ,{"data_rate": 0.5,"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
         ,{"data_rate": 0.5, "pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
-        , {"data_rate": 0.5, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"},
-        {"data_rate": 0.5, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"}]
+        ,{"data_rate": 0.5, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"}
+        ,{"data_rate": 0.5, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"}
+
+        ,{"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
+        ,{"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
+        ,{"pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"}
+        ,{"pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"}]
 
 #min = 60
 #time.sleep(100*min)
