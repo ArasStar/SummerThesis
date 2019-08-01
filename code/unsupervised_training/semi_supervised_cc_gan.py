@@ -57,11 +57,16 @@ else:
     device = torch.device('cpu')
 print(device)
 
-def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_size=16,noised=1, noise_size=100, label_rate=0.2 , num_workers=5, from_checkpoint=None, from_Pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
+def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3, lr=0.0002, batch_size=16,noised=1, noise_size=100, label_rate=0.2 , num_workers=5, from_checkpoint=None, from_pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
 
     kwargs_cc_gan_patch ={"show":show, "gpu" : use_cuda}
     kwarg_Common ={"num_epochs":num_epochs,"learning_rate":lr,"batch_size":batch_size,"resize":resize,"label_rate":label_rate}
+
     kwargs={"Common":kwarg_Common}
+
+    if self_supervised:
+        for key in self_supervised.keys():
+            kwargs[key] = self_supervised[key]
 
     #just ToTensor before patch
     channel3 = transforms.Lambda(lambda x: torch.cat([x, x, x], 0))
@@ -113,18 +118,13 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
     fake_label = 0
 
 
-    if from_Pretrained :
-        loader = load_model.Load_Model(method=method,pre_trained = pre_trained_PATH, kwargs=kwargs, model=[netG,netD], optimizer=[optimizerG,optimizerD], plot_loss=[G_losses,D_losses,C_loss] )
-        file_name  ,plot_loss  = loader()
+    loader = load_model.Load_Model(method= ("self_supervised_" if self_supervised else "") +method ,pre_trained = from_pretrained, from_checkpoint = from_checkpoint,
+                                    kwargs=kwargs, model=[netG,netD], optimizer=[optimizerG,optimizerD], plot_loss=[G_losses,D_losses,C_losses], combo= list(self_supervised.keys()) if self_supervised else [] )
+    file_name  ,head_arch, [G_losses,D_losses,C_losses]   = loader()
 
-    elif from_checkpoint :
-        loader = load_model.Load_Model(method=method ,from_checkpoint = from_checkpoint,  kwargs=kwargs, model=[netG,netD], optimizer=[optimizerG,optimizerD], plot_loss=[G_losses,D_losses,C_loss] )
-        file_name ,plot_loss  = loader()
-
-    else:
-        print("training GAN from scratch")
-        file_name= method + "".join(["_"+key + str(kwargs["Common"][key]) for key in kwargs["Common"].keys()])+".tar"
-
+    if head_arch:
+        n_heads= len(head_arch)
+        ss_criterion = torch.nn.CrossEntropyLoss().to(device = device)
 
     saved_model_PATH = saved_model_PATH+  "saved_models/semi_supervised/"+ file_name[:-4]
     if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
@@ -135,6 +135,7 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
     currentDT = datetime.datetime.now()
 
     netD.to(device)
+    ss_GAN_head = netD.discriminator.classifier
     netG.to(device)
     print("Starting Training Loop...")
     print(file_name)
@@ -144,9 +145,11 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
         for i, (real_images , class_labels , label_ok) in enumerate(dataloader):
 
             bs = real_images.shape[0]
+
             real_images = real_images.to(device=device,dtype=torch.float)
             # Real img to 3 channel for D and patcher for G
             patcher = cc_gan.Patcher_CC_GAN(real_images,**kwargs_cc_gan_patch)#, transform = transform_after_patching)
+            temp_real_images = real_images.clone()
             real_images = torch.stack([channel3(r_im) for r_im in real_images ])
             class_labels = class_labels.to(device=device,dtype=torch.float)
 
@@ -166,17 +169,34 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
             for i_,l in enumerate(label_ok):
                 if l==1: index_list.append(i_)
             #index_list = torch.tensor(index_list)
+            errD_real = advs_criterion( sig(output[:, 0].view(-1)), label)
 
             if index_list:
                 c_loss = classification_criterion(output[index_list,1:] ,class_labels[index_list,:])
-                errD_real = advs_criterion( sig(output[:, 0].view(-1)), label) + c_loss
-            else:
-                #print(i,"noo index_list",index_list)
-                errD_real = advs_criterion( sig(output[:, 0].view(-1)), label)
+                errD_real = errD_real + c_loss
 
             # Calculate gradients for D in backward pass
             errD_real.backward()
             D_x = sig(output[:,0].view(-1)).mean().item()
+
+            #SELF SUPERVISION###########
+            if self_supervised:
+                head_dict = head_arch[i % n_heads]
+                netD.discriminator.classifier = head_dict["head"]
+                ss_patcher = head_dict["patch_func"](image_batch= temp_real_images,**head_dict["args"])
+                optimizer_D_extra= head_dict['optimizer']
+                optimizer_D_extra.zero_grad()
+                patches, patch_labels =  ss_patcher()
+                patches = patches.to(device, dtype = torch.float32)
+                patch_labels = patch_labels.to(device, dtype = torch.long)
+                output_patch = netD(patches)
+                #print(i,"noo index_list",index_list)
+                errD_self = ss_criterion(output_patch,patch_labels)
+                errD_self.backward()
+                netD.discriminator.classifier=ss_GAN_head
+
+            #SELF SUPERVISION###########
+
 
             ## Train with all-fake batch
             # Generate batch of latent vectors (context conditioned in our case)
@@ -233,6 +253,11 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
             # Add the gradients from the all-real and all-fake batches
             # Update D
             optimizerD.step()
+
+            #SELF SUPERVISION###########
+            if self_supervised:
+                optimizer_D_extra.step()
+            #SELF SUPERVISION###########
 
             ############################
             # (2) Update G network: maximize log(D(G(z)))
@@ -337,18 +362,22 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
     PATH =  saved_model_PATH+"/"+file_name
 
+    x = np.arange(len(G_losses))*200
+
     plt.figure(figsize=(15,5))
     plt.title("Generator and Discriminator Loss During Training")
-    plt.plot(G_losses,label="G")
-    plt.plot(D_losses,label="D")
+    plt.plot(x,G_losses,label="G")
+    plt.plot(x,D_losses,label="D")
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig(saved_model_PATH+'/'+'plot_DnG_loss_'+ '.png')
 
+    x = np.arange(len(C_losses))*200
+
     plt.figure(figsize=(15,5))
     plt.title("classification loss")
-    plt.plot(C_losses)
+    plt.plot(x,C_losses)
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.savefig(saved_model_PATH+'/'+'plot_loss_'+ '.png')
@@ -363,7 +392,8 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
 
     ani.save(saved_model_PATH+"/G_during_training.mp4")
 
-    torch.save({
+
+    save_dict ={
                 'epoch': kwarg_Common["num_epochs"] ,
                 'G_model_state_dict': netG.state_dict(),
                 'G_optimizer_state_dict': optimizerG.state_dict(),
@@ -372,44 +402,57 @@ def train_ccgan(method="CC_GAN",resize = 320, num_epochs=3, lr=0.0002, batch_siz
                 'D_optimizer_state_dict': optimizerD.state_dict(),
                 'D_loss':D_losses,
                 'C_loss':C_losses,
-                'img_lists':img_list}, PATH)
+                'img_lists':img_list}
 
-    '''
-    head_name_list = [head["head_name"]  for head in head_arch]
-    head_state_list = [head["head"].state_dict()  for head in head_arch]
-    optimizer_state_list=[head['optimizer'].state_dict()  for head in head_arch]
 
-    '''
+    if self_supervised:
+
+        head_name_list = [head["head_name"]  for head in head_arch]
+        head_state_list = [head["head"].state_dict()  for head in head_arch]
+        optimizer_state_list=[head['optimizer'].state_dict()  for head in head_arch]
+
+        save_dict['ss_model_head']= dict(zip(head_name_list,head_state_list)),#saving name of the method and the head state
+        save_dict['ss_optimizer_state_dict']= dict(zip(head_name_list, optimizer_state_list))
+
+
+    torch.save(save_dict, PATH)
+
+
     log_file.close()
     print('saved  model(model,optim,loss, epoch)')
 
 #'''(method="relative_position",num_epochs=3, learning_rate=0.0001, batch_size=16,split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=300)'''
 
+
+
+transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
+                                             transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
+perm_set_size = 500
+PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
+kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":225, "patch_crop_size":64, "transform" :transform_after_patching, "gpu": use_cuda, "show":False }
+kwarg_Relative_Position = {"split":3,"transform":transform_after_patching,"show":False,"labels_path":root_PATH}
+kwargs_self={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position}
+
+
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
-            {"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
-
+            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":256,"batch_size":16},
+            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16},
+            {"self_supervised":kwargs_self,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
+            {"self_supervised":kwargs_self,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
             ]
 
+#plotlosssss self supervising task losses check SELFSUPERISING PY
+'''
+schedule=[
+            {method":"CC_GAN","num_epochs":3,"show":False, "resize":320,"batch_size":16},
+            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16},
 
-
+            ]
+'''
 for kwargs in schedule:
   train_ccgan(**kwargs)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

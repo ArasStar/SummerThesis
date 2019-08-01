@@ -91,8 +91,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
   labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt"
   cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train.csv",
-                                                                  transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, num_workers=5)
-
+                                            transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, num_workers=5)
 
   print("device", device)
   model=model.to(device=device)
@@ -128,7 +127,6 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
             #print(len(plot_loss[head_dict['head_name']]))
 
-
         if (i+1) % 100 == 0:                              # Logging
           print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f' %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
           aftertDT = datetime.datetime.now()
@@ -152,7 +150,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   print('END--',file_name)
 #'''
   PATH =  saved_model_PATH+"/"+file_name
-  '''
+
   head_name_list = [head["head_name"]  for head in head_arch]
   head_state_list = [head["head"].state_dict()  for head in head_arch]
   optimizer_state_list=[head['optimizer'].state_dict()  for head in head_arch]
@@ -166,7 +164,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
   curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(model_name=file_name,root_PATH= saved_model_PATH,mode="just_plot_loss")
   curves.plot_loss(plot_loss=plot_loss)
-  '''
+
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
 #'''
@@ -199,22 +197,26 @@ schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/se
 
 
 p = saved_model_PATH +'saved_models/self_supervised/'
-schedule=[{"method":"Jigsaw","num_epochs":3},
-          {"method":"Relative_Position","num_epochs":3},
-          {"method":"naive_combination","combo":combo,"num_epochs":3},
-          {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size300_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size300_grid_crop_size225_patch_crop_size64.tar"}
-          ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
-          ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size300_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size300_grid_crop_size225_patch_crop_size64.tar"}]
 
 schedule=[ {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
           ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
 
-schedule=[{"method":"Jigsaw","num_epochs":3},
-          {"method":"Relative_Position","split":3.0,"show":True},
-          {"method":"Relative_Position","split":2.0,"show":True}]
+schedule=[      {"method":"naive_combination","combo":combo,"num_epochs":3,"perm_set_size":100}
+                ,{"method":"naive_combination","combo":combo,"num_epochs":3,"perm_set_size":500}
+                ,{"method":"Jigsaw","perm_set_size":100}
+                ,{"method":"Jigsaw","perm_set_size":500}
+                ,{"method":"Relative_Position","split":3.0}
+                ,{"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+                ,{"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+                ,{"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
+                ,{"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
+schedule=[   {"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
+            ,{"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
+            ,{"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
+            ,{"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
 for kwargs in schedule:
   self_train(**kwargs)

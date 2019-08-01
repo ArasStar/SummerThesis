@@ -47,7 +47,7 @@ class Load_Model(object):
 
             return file_name , self.optimizer_chex ,self.plot_loss
 
-        elif self.method =="CC_GAN":
+        elif self.method.__contains__("CC_GAN"):
 
             if self.pre_trained:
                 file_name = self.gan_load_from_Pretrained()
@@ -55,27 +55,41 @@ class Load_Model(object):
             elif self.from_checkpoint:
                 file_name = self.load_from_gan_checkpoint()
 
+            else:#from from_scratch
+                    if self.combo:
+                        self.set_head_ccgan()
+                        ss_name = "_".join(["".join([key + str(self.kwargs[ss][key[1:]]) for key in self.param_names_dict[ss]]) for ss in self.combo])
+                        print("parti  ", ss_name)
 
-            return file_name ,self.plot_loss
+                        file_name = self.method + "".join([key + str(self.kwargs["Common"][key]) for key in self.kwargs["Common"].keys()])+ss_name+".tar"
 
+                    else:
+                        file_name= self.method + "".join([key + str(self.kwargs["Common"][key]) for key in self.kwargs["Common"].keys()])+".tar"
 
-        elif self.from_checkpoint:
-            file_name = self.load_from_checkpoint()
-
+            return file_name, self.head, self.plot_loss
 
         else:
-            file_name = self.get_file_name()
-            self.set_head()
+            if self.from_checkpoint:
 
-        #modelhead ,model, optimizer ,file_name, plot_loss
-        return file_name, self.head , self.plot_loss
+                file_name = self.load_from_checkpoint()
+
+
+            else:
+
+                file_name = self.get_file_name()
+                self.set_head()
+
+
+                #modelhead ,model, optimizer ,file_name, plot_loss
+
+            return file_name, self.head , self.plot_loss
 
     def get_file_name(self):
 
         file_name = ""
         if self.method.__contains__("combination"):
-            if self.combo ==[]:
-                 print("PROBLEM file_name NAIVE COMB")
+            assert(self.combo !=[]),"PROBLEM file_name NAIVE COMB"
+
             file_name = self.method+"*"+"*".join(self.combo)+"*"
             self.plot_loss = dict(zip(self.combo,[[] for i in range(len(self.combo))]))
 
@@ -96,19 +110,21 @@ class Load_Model(object):
         return file_name
 
     def set_head(self):
-        if self.combo ==[]: print("PROBLEM gethead NAIVE COMB")
+        assert(self.combo !=[]),"PROBLEM file_name NAIVE COMB2"
 
         heads = []
         for h in self.combo:
 
-          head_module = head_libs[h]
-          method_head = head_module.Basic_Head(1024,self.out_D[h], gpu = self.use_cuda)
-          to_patch = getattr(head_module,h)
-          kwarg =self.kwargs[h]
+            head_module = head_libs[h]
+            method_head = head_module.Basic_Head(1024,self.out_D[h], gpu = self.use_cuda)
+            to_patch = getattr(head_module,h)
+            kwarg =self.kwargs[h]
+            heads.append({"head":method_head, "patch_func":to_patch, "args": kwarg, "optimizer": torch.optim.RMSprop(list(self.model.features.parameters())+list(method_head.parameters()), lr=self.kwargs['Common']["learning_rate"]) ,"head_name":h})
 
-          heads.append({"head":method_head, "patch_func":to_patch, "args": kwarg, "optimizer": torch.optim.RMSprop(self.model.parameters(), lr=self.kwargs['Common']["learning_rate"]) ,"head_name":h})
 
         self.head = heads
+
+
 
     def load_from_checkpoint(self):
 
@@ -200,7 +216,9 @@ class Load_Model(object):
             self.kwargs["Jigsaw"]["grid_crop_size"] = grid_crop_size
             self.kwargs["Jigsaw"]["patch_crop_size"] = patch_crop_size
 
-            self.kwargs["Jigsaw"]["path_permutation_set"].replace(str(old_perm)+".pt",str(perm_set_size)+".pt")
+            self.kwargs["Jigsaw"]["path_permutation_set"] = self.kwargs["Jigsaw"]["path_permutation_set"].replace(str(old_perm),str(perm_set_size))
+            self.out_D["Jigsaw"] = perm_set_size
+
 
     def tl_load_from_Pretrained(self):
 
@@ -242,9 +260,6 @@ class Load_Model(object):
         file_name = file_name.replace(file_name[start_i:end_i],'epoch'+ str( initial_epoch + self.kwargs["Common"]["num_epochs"]))
 
         return file_name
-
-
-
 
     def gan_load_from_Pretrained(self):
 
@@ -301,5 +316,20 @@ class Load_Model(object):
 
 
 
+
+    def set_head_ccgan(self):
+        assert(self.combo !=[]),"PROBLEM file_name NAIVE COMB2"
+
+        heads = []
+        for h in self.combo:
+
+          head_module = head_libs[h]
+          method_head = head_module.Basic_Head(1024,self.out_D[h], gpu = self.use_cuda)
+          to_patch = getattr(head_module,h)
+          kwarg =self.kwargs[h]
+
+          heads.append({"head":method_head, "patch_func":to_patch, "args": kwarg, "optimizer": torch.optim.RMSprop(list(self.model[1].discriminator.features.parameters())+list(method_head.parameters()), lr=self.kwargs['Common']["learning_rate"]) ,"head_name":h})
+
+        self.head = heads
 
     #baby yelling in my ear

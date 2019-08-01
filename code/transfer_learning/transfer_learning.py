@@ -70,13 +70,9 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
     kwargs={"Common":kwarg_Common}
 
 
-    if pre_trained_PATH :
-        loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH, kwargs=kwargs, model=model,  plot_loss=plot_loss, use_cuda=use_cuda  )
+    if pre_trained_PATH or from_checkpoint :
+        loader = load_model.Load_Model(method="TL",pre_trained = pre_trained_PATH,from_checkpoint = from_checkpoint, kwargs=kwargs, model=model,  plot_loss=plot_loss, use_cuda=use_cuda  )
         file_name , optimizer ,plot_loss  = loader()
-
-    elif from_checkpoint :
-        loader = load_model.Load_Model(method="TL",from_checkpoint = from_checkpoint, kwargs=kwargs, model=model,  plot_loss=plot_loss, use_cuda=use_cuda  )
-        file_name , optimizer , plot_loss  = loader()
 
     else:
         print("training from scratch")
@@ -95,10 +91,8 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16, data_rate=1, p
 
     currentDT = datetime.datetime.now()
     model=model.to(device=device)
-
     print("started training")
-    print('START--',file_name )
-
+    print('START--',file_name)
     model.train()
     for epoch in range(num_epochs):
         for i,  (images, labels,_) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
@@ -150,27 +144,17 @@ schedule=[  {"transfer_learning":0}]
 
 c = saved_model_PATH +'saved_models/transfer_learning/'
 p = saved_model_PATH +'saved_models/self_supervised/'
-s=  saved_model_PATH +'saved_models/semi_supervised/'
+s =  saved_model_PATH +'saved_models/semi_supervised/'
+
 schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 
-schedule=[{"data_rate": 0.2,"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
-        ,{"data_rate": 0.2, "pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
-        ,{"data_rate": 0.2, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"}
-        ,{"data_rate": 0.2, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"}
-
-        ,{"data_rate": 0.5,"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
-        ,{"data_rate": 0.5, "pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
-        ,{"data_rate": 0.5, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"}
-        ,{"data_rate": 0.5, "pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"}
-
-        ,{"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
-        ,{"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
+schedule=[{"pre_trained_PATH":s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
         ,{"pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size32_resize128.tar"}
         ,{"pre_trained_PATH": s+"CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size64_resize128.tar"}]
 
 #min = 60
-#time.sleep(100*min)
+#time.sleep(1050*min)
 
 
 for kwargs in schedule:
