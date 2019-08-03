@@ -36,6 +36,8 @@ root_PATH = "/homes/ay1218/Desktop/"
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/relative_position')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/rotation')
+
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/jigsaw')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/plotting_lib')
 
@@ -52,8 +54,9 @@ else:
     device = torch.device('cpu')
 
 
-def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
- combo=[], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
+def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resize=320 ,K=4, split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
+ combo=[], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False,batch_factor=False):
+
 
   model = models.densenet121()
   #optimizer =torch.optim.RMSprop(model.parameters(), lr=learning_rate)
@@ -63,7 +66,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   #Setting permuation_set
   PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
   #just ToTensor before patch
-  transform_train= transforms.Compose([  transforms.RandomCrop(320), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
+  transform_train= transforms.Compose([  transforms.Resize((resize,resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
 
   #after patch transformation
   transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
@@ -77,8 +80,10 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   #constant vars
   kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
   kwarg_Relative_Position = {"split":split,"transform":transform_after_patching,"show":show,"labels_path":root_PATH}
-  kwarg_Common ={"num_epochs":num_epochs,"learning_rate":learning_rate, "batch_size":batch_size}
-  kwargs={"Common": kwarg_Common,"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position}
+  kwarg_Rotation = {"K":K,"transform":transform_after_patching,"show":show}
+
+  kwarg_Common ={"num_epochs":num_epochs,"learning_rate":learning_rate, "batch_size":batch_size*batch_factor if batch_factor else batch_size}
+  kwargs={"Common": kwarg_Common,"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation}
 
   loader = load_model.Load_Model(method=method, combo=combo, from_checkpoint =from_checkpoint, kwargs=kwargs, model=model, plot_loss=plot_loss ,use_cuda=use_cuda )
 
@@ -102,7 +107,8 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   for epoch in range(num_epochs):
       for i,  (images, observations,_) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
 
-        head_dict = head_arch[i % n_heads]
+        h_id = i % n_heads
+        head_dict = head_arch[h_id]
         model.classifier = head_dict["head"]
         patcher = head_dict["patch_func"](image_batch= images,**head_dict["args"])
         optimizer= head_dict['optimizer']
@@ -115,9 +121,20 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
         outputs = model(patches)                          # Forward pass: compute the output class given a image
 
         loss = criterion(outputs, labels)                 # Compute the loss: difference between the output class and the pre-given label
-        optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
+
+
+
+        if batch_factor and i % (batch_factor*n_heads) == h_id:
+            optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
+        elif not batch_factor:
+            optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
+
         loss.backward()                                   # Backward pass: compute the weight
-        optimizer.step()                                  # Optimizer: update the weights of hidden nodes
+
+        if batch_factor and (i+1) % (batch_factor*n_heads) == h_id:
+            optimizer.step()
+        elif not batch_factor:
+            optimizer.step()                                  # Optimizer: update the weights of hidden nodes
 
 
         for n in range(n_heads):
@@ -136,8 +153,10 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
 
         if show:
           print("showa giriyooor",show)
-          i = 100000000
-      #break
+          break
+
+    #    break
+    #  break
 
 
   print('training done')
@@ -169,16 +188,6 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, spli
   print('saved  model(model,optim,loss, epoch)')# to google drive')
 #'''
 
-'''
-method="relative_position"
-#Params for relative_position
-split = 3.0
-#Params for jigsaw
-grid_crop_size=225
-patch_crop_size=64
-perm_set_size=300
-num_epochs=3
-'''
 #'''(method="relative_position",num_epochs=3, learning_rate=0.0001, batch_size=16,split = 3.0, grid_crop_size=225,patch_crop_size=64,perm_set_size=300)'''
 
 combo = ["Relative_Position","Jigsaw"]
@@ -189,7 +198,12 @@ schedule=[{"method":"relative_position","num_epochs":3},
           {"method":"naive_combination","num_epochs":3}]
 
 
-combo = ["Relative_Position","Jigsaw"]
+combo_RPnJ = ["Relative_Position","Jigsaw"]
+combo_RPnR = ["Relative_Position","Rotation"]
+combo_RnJ = ["Rotation","Jigsaw"]
+
+combo_all = ["Rotation","Relative_Position","Jigsaw"]
+
 schedule=[ {"num_epochs":1,"from_checkpoint":"/home/aras/Desktop/saved_models/self_supervised/Relative_Position_epoch3_batch16_learning_rate0.0001_split3.0.tar"}]
 
 schedule=[{"method":"Relative_Position","num_epochs":3,"split":3.0}]
@@ -203,20 +217,37 @@ schedule=[ {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_
           ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
 
-schedule=[      {"method":"naive_combination","combo":combo,"num_epochs":3,"perm_set_size":100}
-                ,{"method":"naive_combination","combo":combo,"num_epochs":3,"perm_set_size":500}
-                ,{"method":"Jigsaw","perm_set_size":100}
-                ,{"method":"Jigsaw","perm_set_size":500}
-                ,{"method":"Relative_Position","split":3.0}
-                ,{"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-                ,{"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+schedule=[      {"method":"naive_combination","combo":combo,"num_epochs":1,"perm_set_size":100}
+                ,{"method":"naive_combination","combo":combo,"num_epochs":1,"perm_set_size":500}
+                ,{"method":"Jigsaw","perm_set_size":100,"num_epochs":1}
+                ,{"method":"Jigsaw","perm_set_size":500,"num_epochs":1}
+                ,{"method":"Relative_Position","split":3.0,"num_epochs":1}
+                ,{"num_epochs":1,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+                ,{"num_epochs":1,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
                 ,{"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
                 ,{"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
-schedule=[   {"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
-            ,{"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
-            ,{"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
-            ,{"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
+#schedule=[ {"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
+schedule=[      {"method":"naive_combination","combo":combo,"num_epochs":2,"perm_set_size":100}
+                ,{"method":"naive_combination","combo":combo,"num_epochs":2,"perm_set_size":500}
+                ,{"method":"Jigsaw","perm_set_size":100,"num_epochs":1}
+                ,{"method":"Jigsaw","perm_set_size":500,"num_epochs":1}
+                ,{"method":"Relative_Position","split":3.0,"num_epochs":1}]
+
+schedule = [{"method":"Rotation","num_epochs":1,"batch_size":4,"batch_factor":4}
+
+, {"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4}
+
+ ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4}
+ , {"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":500,"batch_size":4,"batch_factor":4}
+
+ , {"method":"naive_combination","combo":combo_all,"num_epochs":3,"perm_set_size":100,"batch_size":4,"batch_factor":4}
+ , {"method":"naive_combination","combo":combo_all,"num_epochs":3,"perm_set_size":500,"batch_size":4,"batch_factor":4}]
+
+
+import time
+#min = 60
+#time.sleep(2*60*min)
 
 for kwargs in schedule:
   self_train(**kwargs)

@@ -4,8 +4,9 @@ import torch
 
 import relative_position
 import jigsaw
+import rotation
 
-head_libs={"Relative_Position":relative_position ,"Jigsaw":jigsaw}
+head_libs={"Relative_Position":relative_position ,"Jigsaw":jigsaw,"Rotation":rotation}
 
 
 class Load_Model(object):
@@ -17,14 +18,14 @@ class Load_Model(object):
         self.from_checkpoint = from_checkpoint
         self.pre_trained = pre_trained
         self.param_names_dict = { "Common":["_num_epochs", "_batch_size", "_learning_rate"]  ,"Jigsaw":["_perm_set_size", "_grid_crop_size", "_patch_crop_size"],
-                                "Relative_Position":["_split"]}
+                                "Relative_Position":["_split"],"Rotation":["_K"]}
         self.combo = combo
         self.kwargs = kwargs
         self.model= model
         self.head = None
         self.optimizer = optimizer
         self.optimizer_chex = None
-        self.out_D = "" if method=="TL" else {"Relative_Position":8 ,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
+        self.out_D = "" if method=="TL" else {"Relative_Position":8 ,"Rotation":4,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
         self.use_cuda = use_cuda
         self.plot_loss = plot_loss
 
@@ -120,7 +121,6 @@ class Load_Model(object):
             to_patch = getattr(head_module,h)
             kwarg =self.kwargs[h]
             heads.append({"head":method_head, "patch_func":to_patch, "args": kwarg, "optimizer": torch.optim.RMSprop(list(self.model.features.parameters())+list(method_head.parameters()), lr=self.kwargs['Common']["learning_rate"]) ,"head_name":h})
-
 
         self.head = heads
 
@@ -286,7 +286,7 @@ class Load_Model(object):
                 if torch.is_tensor(v):
                     state[k] = v.to(device=self.device)
 
-        self.model[1].load_state_dict(checkpoint['D_model_state_dict'], strict=True) # just features get downloaded classifier stays
+        self.model[1].load_state_dict(checkpoint['D_model_state_dict'], strict=False) # just features get downloaded ,(and classifier if its just ccgan or ccgan2)
         self.plot_loss[1] = checkpoint['D_loss']
         self.optimizer[1]=  torch.optim.Adam(self.model[0].parameters(), lr=self.kwargs["Common"]['learning_rate'])
         self.optimizer[1].load_state_dict(checkpoint['D_optimizer_state_dict'])
@@ -296,6 +296,26 @@ class Load_Model(object):
             for k, v in state.items():
                 if torch.is_tensor(v):
                     state[k] = v.to(device=self.device)
+
+
+        if combo:
+            self.set_head_ccgan()
+            head_dict = checkpoint["ss_model_head"] # dict headname: headstateDict
+            opt_dict = checkpoint['ss_optimizer_state_dict']
+
+            for head in self.head:
+
+                h_name = head["head_name"]
+                head["head"].load_state_dict(head_dict[h_name])
+                head["optimizer"].load_state_dict(opt_dict[h_name])
+
+                for state in head['optimizer'].state.values():
+                    for k, v in state.items():
+                        if torch.is_tensor(v):
+                            state[k] = v.to(device=self.device)
+
+            self.model[1].classifier.load_state_dict(checkpoint['ccgan_head'], strict = True)
+
 
 
         file_name = self.from_checkpoint.split("/")[-1]

@@ -106,7 +106,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
     D_losses = []
     C_losses = []
     sig = nn.Sigmoid()
-    advs_criterion = nn.BCELoss().to(device)
+    advs_criterion = nn.BCEWithLogitsLoss().to(device)
     classification_criterion = nn.BCEWithLogitsLoss(pos_weight=chexpert_load.load_posw()).to(device=device)
 
 
@@ -169,7 +169,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             for i_,l in enumerate(label_ok):
                 if l==1: index_list.append(i_)
             #index_list = torch.tensor(index_list)
-            errD_real = advs_criterion( sig(output[:, 0].view(-1)), label)
+            errD_real = advs_criterion( output[:, 0], label)
 
             if index_list:
                 c_loss = classification_criterion(output[index_list,1:] ,class_labels[index_list,:])
@@ -231,7 +231,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             output = netD(filled.detach())
 
             # Calculate D's loss on the all-fake batch
-            errD_fake =  advs_criterion(sig(output[:, 0].view(-1)), label)
+            errD_fake =  advs_criterion(output[:, 0], label)
 
             # Calculate the gradients for this batch
             errD_fake.backward()
@@ -244,7 +244,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             if method == "CC_GAN2":
                 fake = torch.stack([channel3(f_im) for f_im in fake ]).to(device=device)
                 output2 = netD(fake.detach())
-                errD_fake2 =  advs_criterion( sig(output2[:, 0].view(-1)), label)
+                errD_fake2 =  advs_criterion(output2[:, 0], label)
                 D_G_z1_2 = sig(output2[:,0].view(-1)).mean().item()
                 errD_fake2.backward()
                 errD = errD + errD_fake2
@@ -267,14 +267,14 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             # Since we just updated D, perform another forward pass of all-fake batch through D
             output = netD(filled)
             # Calculate G's loss based on this output
-            errG = advs_criterion(sig(output[:, 0].view(-1)), label)
+            errG = advs_criterion(output[:, 0], label)
             # Calculate gradients for G
             errG.backward(retain_graph=True)
 
             #if CC-GAN2 then put X_g as an extra negative example
             if method == "CC_GAN2":
                 output2 = netD(fake)
-                errG2 = advs_criterion( sig(output2[:, 0].view(-1)), label)
+                errG2 = advs_criterion( output2[:, 0], label)
                 D_G_z2_2 = sig(output2[:,0].view(-1)).mean().item()
                 errG2.backward()
                 errG = errG + errG2
@@ -413,6 +413,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
         save_dict['ss_model_head']= dict(zip(head_name_list,head_state_list)),#saving name of the method and the head state
         save_dict['ss_optimizer_state_dict']= dict(zip(head_name_list, optimizer_state_list))
+        save_dict['ccgan_head']= ss_GAN_head.state_dict()
 
 
     torch.save(save_dict, PATH)
@@ -437,8 +438,8 @@ kwargs_self={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16},
+            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             {"self_supervised":kwargs_self,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             {"self_supervised":kwargs_self,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
             ]
