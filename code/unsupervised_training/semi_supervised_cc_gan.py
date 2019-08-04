@@ -98,7 +98,6 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
     fixed_context_conditioned2,fixed_low_res2 ,fixed_cord2 = patcher2()
 
 
-
     netD = cc_gan.Discriminator()
     netG = cc_gan.Generator(noise=noised, noise_k_size=int(resize/16), noise_size= noise_size)
 

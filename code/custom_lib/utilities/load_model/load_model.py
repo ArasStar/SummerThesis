@@ -74,13 +74,9 @@ class Load_Model(object):
 
                 file_name = self.load_from_checkpoint()
 
-
             else:
-
                 file_name = self.get_file_name()
                 self.set_head()
-
-
                 #modelhead ,model, optimizer ,file_name, plot_loss
 
             return file_name, self.head , self.plot_loss

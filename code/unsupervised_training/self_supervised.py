@@ -104,10 +104,24 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
   currentDT = datetime.datetime.now()
   print('START--',file_name)
 
+  iter_count =   np.zeros(n_heads)
+  batch_count=-1 if batch_factor else 1
+  h_id=0
   for epoch in range(num_epochs):
       for i,  (images, observations,_) in enumerate(dataloader):   # Load a batch of images with its (index, data, class)
 
-        h_id = i % n_heads
+        if batch_factor:
+            if batch_count < (batch_factor-1):
+                batch_count += 1
+            elif batch_count == (batch_factor-1):
+                iter_count[h_id] += 1
+                batch_count=0
+                h_id = (h_id+1) % n_heads
+        else:
+            h_id = i % n_heads
+            iter_count[h_id] += 1
+
+
         head_dict = head_arch[h_id]
         model.classifier = head_dict["head"]
         patcher = head_dict["patch_func"](image_batch= images,**head_dict["args"])
@@ -122,30 +136,32 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
 
         loss = criterion(outputs, labels)                 # Compute the loss: difference between the output class and the pre-given label
 
-
-
-        if batch_factor and i % (batch_factor*n_heads) == h_id:
+        if batch_factor and i % batch_factor == 0:
             optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
         elif not batch_factor:
             optimizer.zero_grad()                             # Intialize the hidden weight to all zeros
 
+        #print("i",i," h_id",h_id,"iter_count", iter_count[h_id],iter_count)
+
         loss.backward()                                   # Backward pass: compute the weight
 
-        if batch_factor and (i+1) % (batch_factor*n_heads) == h_id:
+        if n_heads ==1 and loss<0.00009:
+            print("early_stop")
+            break
+        if batch_factor and (i+1) % batch_factor == 0:
             optimizer.step()
         elif not batch_factor:
             optimizer.step()                                  # Optimizer: update the weights of hidden nodes
 
+        #print("i",i,"h_id",h_id, "batch_count",batch_count)
 
-        for n in range(n_heads):
-          if i%200 == n:
-            #print(head_dict['head_name'])
+        if iter_count[h_id] % 200 == 0 and batch_count == 1:
+            #print(i,"hooop",iter_count[h_id])
             plot_loss[head_dict['head_name']].append(loss)
-
             #print(len(plot_loss[head_dict['head_name']]))
 
         if (i+1) % 100 == 0:                              # Logging
-          print('Epoch [%d/%d], Step [%d/%d], Loss: %.4f' %(epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
+          print(head_dict["head_name"] +' Epoch [%d/%d], Step [%d/%d], Loss: %.4f' %( epoch+1, num_epochs, i+1, len(cheXpert_train_dataset)//batch_size, loss))
           aftertDT = datetime.datetime.now()
           c=aftertDT-currentDT
           mins,sec=divmod(c.days * 86400 + c.seconds, 60)
@@ -157,8 +173,6 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
 
     #    break
     #  break
-
-
   print('training done')
 
   aftertDT = datetime.datetime.now()
@@ -183,7 +197,8 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
 
   curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(model_name=file_name,root_PATH= saved_model_PATH,mode="just_plot_loss")
   curves.plot_loss(plot_loss=plot_loss)
-
+  #print("Rotation",plot_loss["Rotation"])
+  #print("Relative_Position", plot_loss["Relative_Position"])
   #torch.save(model.state_dict(), PATH)
   print('saved  model(model,optim,loss, epoch)')# to google drive')
 #'''
@@ -234,15 +249,11 @@ schedule=[      {"method":"naive_combination","combo":combo,"num_epochs":2,"perm
                 ,{"method":"Jigsaw","perm_set_size":500,"num_epochs":1}
                 ,{"method":"Relative_Position","split":3.0,"num_epochs":1}]
 
-schedule = [{"method":"Rotation","num_epochs":1,"batch_size":4,"batch_factor":4}
-
-, {"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4}
-
+schedule = [
+  {"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4}
  ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4}
  , {"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":500,"batch_size":4,"batch_factor":4}
-
- , {"method":"naive_combination","combo":combo_all,"num_epochs":3,"perm_set_size":100,"batch_size":4,"batch_factor":4}
- , {"method":"naive_combination","combo":combo_all,"num_epochs":3,"perm_set_size":500,"batch_size":4,"batch_factor":4}]
+ ]
 
 
 import time
