@@ -7,12 +7,8 @@ import matplotlib.patches as patches4rectangle
 
 
 class Relative_Position(object):
-    def __init__(self, image_batch, split,transform=None, show=False,patch_size=64 ,labels_path="/home/aras/Desktop/"):
+    def __init__(self, image_batch, split,transform=None, show=False, labels_path="/home/aras/Desktop/"):
         self.bs, _, self.h, self.w = image_batch.shape
-        self.cropsize = 266 if patch_size == 64 else 398 # else if patch size 96
-        self.jitter = 5 if  patch_size == 64 else 7
-        self.patch_size = patch_size
-
         self.split = split  # 3x3 or 2x2 grid
         self.i_row = round(self.h / self.split)
         self.i_col = round(self.w / self.split)
@@ -20,14 +16,8 @@ class Relative_Position(object):
         self.image_batch = image_batch
         self.transform = transform
         self.labels_path = labels_path+"SummerThesis/code/custom_lib/selfsupervised_heads/relative_position/rel_pos_labels.png"
-        # list of [patch_xy,pathc2_xy,dir1 , dir reverse]
-        self.adjacent_patch_comb = [[(0,0),(1,1),3.0],[(1,1),(2,2),3.0],[(0,1),(1,2),3.0],[(1,0),(2,1),3.0],
-                                    [(0,2),(1,1),5.0],[(1,1),(2,0),5.0],[(0,1),(1,0),5.0],[(1,2),(2,1),5.0],
-                                    [(0,0),(0,1),2.0],[(0,1),(0,2),2.0],[(1,0),(1,1),2.0],[(1,1),(1,2),2.0],[(2,0),(2,1),2.0],[(2,1),(2,2),2.0],
-                                    [(0,0),(1,0),4.0],[(1,0),(2,0),4.0],[(0,1),(1,1),4.0],[(1,1),(2,1),4.0],[(0,2),(1,2),4.0],[(1,2),(2,2),4.0]]
 
     def __call__(self):
-
         patches = torch.Tensor()
         labels = np.empty(self.bs)
 
@@ -60,50 +50,14 @@ class Relative_Position(object):
         labels = torch.from_numpy(labels)
         return patches, labels
 
-
-    def jitter(self):
-        return np.random.choice([1,-1])*np.randint(self.jitter+1)
-
     def random_adjecent_patches(self, image):
 
-        patch_cord = np.random.randint(len(self.adjacent_patch_comb))#len is 20 , picks random adjacent pair
+        [drow, dcol] = np.random.randint(self.split, size=2)
 
-        [shiftrow, shiftcol] = np.random.randint(self.h - self.cropsize - 1, size=2)
-
-        patch1, patch2, direction cord_list1, cordlist2 = self.patches_from_grid(patch_cord, image, shiftcol, shiftrow)
+        patch1, cord_list1 = self.patch_from_image(image, drow, dcol)
+        patch2, direction, cord_list2 = self.pick_rand_adjacent_patch(image, drow, dcol)
 
         return patch1, patch2, direction, cord_list1, cord_list2
-
-    def patches_from_grid(self, grid, patch_cord, srow ,scol):
-
-        patch_gap = int(self.patchsize*1.5)
-
-        srow += no_j_srow
-        scol += no_j_scol
-
-        random_order = np.random.randint(2)
-
-        a_row_jitter = self.jitter()
-        a_col_jitter = self.jitter()
-        b_row_jitter = self.jitter()
-        b_col_jitter = self.jitter()
-
-        a_row, a_col = srow + a_row_jitter + patch_cord[0][0]*patch_gap,  scol + a_col_jitter + patch_cord[0][1]*patch_gap
-        b_row, b_col = srow + b_row_jitter + patch_cord[1][1]*patch_gap,  scol + b_col_jitter + patch_cord[1][1]*patch_gap
-
-        patch_a = grid[a_row:a_row+self.patch_size + , a_col:a_col+self.patch_size]
-        patch_b = grid[b_row:b_row+self.patch_size, b_col:b_col+self.patch_size]
-        dir = patch_cord[-1]
-
-
-        if random_order:
-            return patch_a, patch_b, dir ,[(a_row,a_row+self.patch_size),(a_col,a_col+self.patch_size)],[(b_row,b_row+self.patch_size),(b_col,b_col+self.patch_size)]
-        else:
-            dir = (dir + 4) % 8
-
-            return patch_b, patch_a, dir, [(b_row,b_row+self.patch_size),(b_col,b_col+self.patch_size)] ,[(a_row,a_row+self.patch_size),(a_col,a_col+self.patch_size)]
-
-        pass
 
     def patch_from_image(self, image, drow, dcol):
 
@@ -121,6 +75,39 @@ class Relative_Position(object):
         patch[:, :row_e - row_s, :col_e - col_s] = image[:, row_s:row_e, col_s:col_e].clone()
 
         return patch, [(row_s, row_e), (col_s, col_e)]
+
+    def pick_rand_adjacent_patch(self, image, drow, dcol):
+
+        def get_adjacent_indices(i, j):
+            split = self.split
+            adjacent_indices = []
+
+            if i > 0:
+                adjacent_indices.append((i - 1, j, 0.0))
+                if j > 0:
+                    adjacent_indices.append((i - 1, j - 1, 7.0))
+                if j + 1 < split:
+                    adjacent_indices.append((i - 1, j + 1, 1.0))
+
+            if i + 1 < split:
+                adjacent_indices.append((i + 1, j, 4.0))
+                if j > 0:
+                    adjacent_indices.append((i + 1, j - 1, 5.0))
+                if j + 1 < split:
+                    adjacent_indices.append((i + 1, j + 1, 3.0))
+
+            if j > 0:   adjacent_indices.append((i, j - 1, 6.0))
+
+            if j + 1 < split: adjacent_indices.append((i, j + 1, 2.0))
+
+            return adjacent_indices
+
+        adj_list = get_adjacent_indices(drow, dcol)
+        randchoice = np.random.randint(len(adj_list))
+        (drow2, dcol2, direction) = adj_list[randchoice]
+        patch2, cord_list2 = self.patch_from_image(image, drow2, dcol2)
+
+        return patch2, direction, cord_list2
 
     def show_cropped_patches(self, image, patch1, patch2, direction, cord_list1, cord_list2):
         # cordlist->[(row_s,row_e),(col_s,col_e)]
