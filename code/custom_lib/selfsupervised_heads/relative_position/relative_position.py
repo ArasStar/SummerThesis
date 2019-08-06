@@ -7,15 +7,13 @@ import matplotlib.patches as patches4rectangle
 
 
 class Relative_Position(object):
-    def __init__(self, image_batch, split,transform=None, show=False,patch_size=64 ,labels_path="/home/aras/Desktop/"):
+    def __init__(self, image_batch,transform=None, show=False,patch_size=64 ,labels_path="/home/aras/Desktop/"):
         self.bs, _, self.h, self.w = image_batch.shape
-        self.cropsize = 266 if patch_size == 64 else 398 # else if patch size 96
-        self.jitter = 5 if  patch_size == 64 else 7
         self.patch_size = patch_size
+        self.jitter = 7
+        self.patch_gap= 1.5*self.patch_size
+        self.cropsize = self.patch_size *4 + self.jitter*2
 
-        self.split = split  # 3x3 or 2x2 grid
-        self.i_row = round(self.h / self.split)
-        self.i_col = round(self.w / self.split)
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
         self.transform = transform
@@ -35,19 +33,26 @@ class Relative_Position(object):
         #                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
         for idx, image in enumerate(self.image_batch):
-            patch1, patch2, direction, cord_list1, cord_list2 = self.random_adjecent_patches(image)
+
+            [srow, scol] = np.random.randint(self.h - self.cropsize - 1, size=2)
+            patch1, patch2, direction, cord_list1, cord_list2 , patch_cord = self.random_adjecent_patches(image, srow, scol)
 
             if (idx == 2 or idx == 0 ) and self.show:
-                self.show_cropped_patches(image, patch1, patch2, direction, cord_list1, cord_list2)
+                self.show_cropped_patches(image, patch1, patch2, direction, cord_list1, cord_list2, srow, scol, patch_cord)
 
             if self.transform:
+                h_patch, w_patch = patch1.shape
+
+                patch1 = patch1.view(1, h_patch, w_patch)
+                patch2 = patch2.view(1, h_patch, w_patch)
+
                 patch1 = self.transform(patch1)
                 patch2 = self.transform(patch2)
-                _, h_patch, w_patch = patch1.shape
+
                 patch1 = patch1.view(1, 3, h_patch, w_patch)
                 patch2 = patch2.view(1, 3, h_patch, w_patch)
             else:
-                _, h_patch, w_patch = patch1.shape
+                h_patch, w_patch = patch1.shape
                 patch1 = patch1.view(1, 1, h_patch, w_patch)
                 patch2 = patch2.view(1, 1, h_patch, w_patch)
             pair = torch.cat((patch1, patch2))
@@ -61,38 +66,35 @@ class Relative_Position(object):
         return patches, labels
 
 
-    def jitter(self):
-        return np.random.choice([1,-1])*np.randint(self.jitter+1)
+    def get_jitter(self):
+        return np.random.choice([1.0,-1.0])*np.random.randint(self.jitter+1) + self.jitter
 
-    def random_adjecent_patches(self, image):
+    def random_adjecent_patches(self, image, srow, scol):
 
         patch_cord = np.random.randint(len(self.adjacent_patch_comb))#len is 20 , picks random adjacent pair
+        patch_cord =self.adjacent_patch_comb[patch_cord]
 
-        [shiftrow, shiftcol] = np.random.randint(self.h - self.cropsize - 1, size=2)
+        patch1, patch2, direction, cord_list1, cord_list2 = self.patches_from_grid(patch_cord, image, srow, scol)
 
-        patch1, patch2, direction cord_list1, cordlist2 = self.patches_from_grid(patch_cord, image, shiftcol, shiftrow)
+        return patch1, patch2, direction, cord_list1, cord_list2 , patch_cord
 
-        return patch1, patch2, direction, cord_list1, cord_list2
+    def patches_from_grid(self, patch_cord, image, srow, scol):
 
-    def patches_from_grid(self, grid, patch_cord, srow ,scol):
-
-        patch_gap = int(self.patchsize*1.5)
-
-        srow += no_j_srow
-        scol += no_j_scol
 
         random_order = np.random.randint(2)
 
-        a_row_jitter = self.jitter()
-        a_col_jitter = self.jitter()
-        b_row_jitter = self.jitter()
-        b_col_jitter = self.jitter()
+        a_row_jitter = self.get_jitter()
+        a_col_jitter = self.get_jitter()
+        b_row_jitter = self.get_jitter()
+        b_col_jitter = self.get_jitter()
 
-        a_row, a_col = srow + a_row_jitter + patch_cord[0][0]*patch_gap,  scol + a_col_jitter + patch_cord[0][1]*patch_gap
-        b_row, b_col = srow + b_row_jitter + patch_cord[1][1]*patch_gap,  scol + b_col_jitter + patch_cord[1][1]*patch_gap
+        a_row, a_col = int(srow + a_row_jitter + patch_cord[0][0]*self.patch_gap),  int(scol + a_col_jitter + patch_cord[0][1]*self.patch_gap)
+        b_row, b_col = int(srow + b_row_jitter + patch_cord[1][0]*self.patch_gap),  int(scol + b_col_jitter + patch_cord[1][1]*self.patch_gap)
+        #print(a_row, a_col)
+        #print(b_row, b_col)
 
-        patch_a = grid[a_row:a_row+self.patch_size + , a_col:a_col+self.patch_size]
-        patch_b = grid[b_row:b_row+self.patch_size, b_col:b_col+self.patch_size]
+        patch_a = image[0, a_row:a_row+self.patch_size , a_col:a_col+self.patch_size]
+        patch_b = image[0, b_row:b_row+self.patch_size, b_col:b_col+self.patch_size]
         dir = patch_cord[-1]
 
 
@@ -100,29 +102,9 @@ class Relative_Position(object):
             return patch_a, patch_b, dir ,[(a_row,a_row+self.patch_size),(a_col,a_col+self.patch_size)],[(b_row,b_row+self.patch_size),(b_col,b_col+self.patch_size)]
         else:
             dir = (dir + 4) % 8
-
             return patch_b, patch_a, dir, [(b_row,b_row+self.patch_size),(b_col,b_col+self.patch_size)] ,[(a_row,a_row+self.patch_size),(a_col,a_col+self.patch_size)]
 
-        pass
-
-    def patch_from_image(self, image, drow, dcol):
-
-        i_row = int(self.i_row)
-        i_col = int(self.i_col)
-        max = self.split - 1
-
-        patch = torch.zeros(1, i_row + 1, i_col + 1)
-
-        row_s = i_row * drow
-        col_s = i_col * dcol
-        row_e = (row_s + i_row) if drow < max else self.h
-        col_e = (col_s + i_col) if dcol < max else self.w
-
-        patch[:, :row_e - row_s, :col_e - col_s] = image[:, row_s:row_e, col_s:col_e].clone()
-
-        return patch, [(row_s, row_e), (col_s, col_e)]
-
-    def show_cropped_patches(self, image, patch1, patch2, direction, cord_list1, cord_list2):
+    def show_cropped_patches(self, image, patch1, patch2, direction, cord_list1, cord_list2, srow, scol, patch_cord):
         # cordlist->[(row_s,row_e),(col_s,col_e)]
         gridimage_delete_later = image.clone()
         gridimage_delete_later = gridimage_delete_later.view(self.h, self.w)
@@ -145,12 +127,26 @@ class Relative_Position(object):
 
         pil_gridimage_delete_later = transforms.ToPILImage()(gridimage_delete_later)
         ax.imshow(pil_gridimage_delete_later, cmap='Greys_r')
-        rect = patches4rectangle.Rectangle((col_start1, row_start1), self.i_col - 2, self.i_row - 2, linewidth=3,
-                                           edgecolor='r', facecolor='none')
+        rect = patches4rectangle.Rectangle((col_start1, row_start1), self.patch_size-2, self.patch_size-2, linewidth=3,
+                                           edgecolor='r', facecolor='none',ls ="--")
         ax.add_patch(rect)
-        rect = patches4rectangle.Rectangle((col_start2, row_start2), self.i_col - 2, self.i_row - 2, linewidth=3,
-                                           edgecolor='b', facecolor='none')
+        rect = patches4rectangle.Rectangle((col_start2, row_start2), self.patch_size - 2, self.patch_size - 2, linewidth=3,
+                                           edgecolor='b', facecolor='none',ls ="--")
         ax.add_patch(rect)
+
+        for col in range(3):
+            for row in range(3):
+
+                if (row,col)!= patch_cord[0] and (row,col)!= patch_cord[1] :
+                    row_jitter = self.get_jitter()
+                    col_jitter = self.get_jitter()
+
+                    row_start, col_start = int(srow + row_jitter + row*self.patch_gap),  int(scol + col_jitter + col*self.patch_gap)
+
+                    rect = patches4rectangle.Rectangle((col_start, row_start), self.patch_size - 2, self.patch_size - 2, linewidth=1,
+                                                   edgecolor='yellow', facecolor='none',ls ="--")
+                    ax.add_patch(rect)
+
 
         plt.title('fullimage - label=' + str(direction))
 

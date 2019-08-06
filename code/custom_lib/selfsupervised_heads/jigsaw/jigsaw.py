@@ -36,7 +36,8 @@ class Jigsaw(object):
                 self.show_cropped_patches(image, shiftcol, shiftrow, permuted_patches, cord_patches, label)
 
             if self.transform:
-                 permuted_patches = torch.stack([self.transform(x_i)
+                permuted_patches=permuted_patches.view(9,1,self.patch_crop_size, self.patch_crop_size)
+                permuted_patches = torch.stack([self.transform(x_i)
                      for i, x_i in enumerate(torch.unbind(permuted_patches, dim=0))], dim=0)
 
             patches = torch.cat((patches, permuted_patches))
@@ -47,19 +48,16 @@ class Jigsaw(object):
 
     def puzzled_patches(self, image):
 
-        grid, shiftcol, shiftrow = self.random_crop(image, self.grid_crop_size)
-        patches, cord_patches = self.get_patches(grid)
+        [srow, scol] = np.random.randint(self.h - self.grid_crop_size - 1, size=2)
+
+        patches, cord_patches = self.get_patches(image,srow, scol)
+
         permuted_patches, label = self.permut(patches)
 
-        return permuted_patches, label, shiftcol, shiftrow, cord_patches
+        return permuted_patches, label, scol, srow, cord_patches
 
-    def random_crop(self, image, cropsize):
-        _, h, _ = image.shape
-        [shiftrow, shiftcol] = np.random.randint(h - cropsize - 1, size=2)
 
-        return image[:, shiftrow:shiftrow + cropsize, shiftcol:shiftcol + cropsize], shiftcol , shiftrow
-
-    def get_patches(self, grid):
+    def get_patches(self, image, srow, scol):
 
         # dive a 225x225 grid to 3x3
         patches = torch.empty(9,self.patch_crop_size, self.patch_crop_size)
@@ -69,21 +67,18 @@ class Jigsaw(object):
         patch_n = 0
         for i in range(0, 3):
             for j in range(0, 3):
+
+
                 # each patch take random crop to prevent edge following
+                [p_srow, p_scol] = np.random.randint(self.grid_patch_size - self.patch_crop_size - 1, size=2)
 
-                row_start = 0 + self.grid_patch_size * i;
-                row_finit = row_start + self.grid_patch_size
-                col_start = 0 + self.grid_patch_size * j;
-                col_finit = col_start + self.grid_patch_size
+                row_start = p_srow +  srow + self.grid_patch_size * i;
+                row_finit = row_start + self.patch_crop_size
+                col_start = p_scol +  scol + self.grid_patch_size * j;
+                col_finit = col_start + self.patch_crop_size
 
-                if self.grid_patch_size > self.patch_crop_size:
-
-                    patches[patch_n,:, :], scol, srow = self.random_crop(grid[:, row_start:row_finit, col_start:col_finit],
-                                                                      self.patch_crop_size)
-                    cord_patches.append((scol, srow))
-                else:
-                    patches[patch_n,:, :] = grid[:, row_start:row_finit, col_start:col_finit]
-                    cord_patches.append((0, 0))
+                patches[patch_n,:, :]= image[:, row_start:row_finit, col_start:col_finit]
+                cord_patches.append((p_scol, p_srow))
 
                 patch_n = patch_n + 1
 

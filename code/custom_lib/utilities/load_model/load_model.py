@@ -18,7 +18,7 @@ class Load_Model(object):
         self.from_checkpoint = from_checkpoint
         self.pre_trained = pre_trained
         self.param_names_dict = { "Common":["_num_epochs", "_batch_size", "_learning_rate"]  ,"Jigsaw":["_perm_set_size", "_grid_crop_size", "_patch_crop_size"],
-                                "Relative_Position":["_split"],"Rotation":["_K"]}
+                                "Relative_Position":["_patch_size"],"Rotation":["_K"]}
         self.combo = combo
         self.kwargs = kwargs
         self.model= model
@@ -91,8 +91,8 @@ class Load_Model(object):
             self.plot_loss = dict(zip(self.combo,[[] for i in range(len(self.combo))]))
 
         else:
-            file_name = self.method
-            self.combo= [self.method]
+            file_name  = self.method
+            self.combo = [self.method]
             self.plot_loss = {self.method:[]}
 
         for c in ["Common"] + self.combo:
@@ -188,11 +188,11 @@ class Load_Model(object):
         self.kwargs["Common"]["batch_size"]= batch_size
 
 
-        if from_checkpoint.__contains__("split"):
+        if from_checkpoint.__contains__("patch_size"):
             #split
-            start_i = from_checkpoint.index('split')
-            split = float(from_checkpoint[start_i+5: start_i+6])
-            self.kwargs["Relative_Position"]["split"] = split
+            start_i = from_checkpoint.index('patch_size')
+            patch_size = float(from_checkpoint[start_i+10: start_i+12])
+            self.kwargs["Relative_Position"]["patch_size"] = patch_size
 
         if from_checkpoint.__contains__("perm_set"):
             #perm set size
