@@ -8,11 +8,16 @@ import matplotlib.patches as patches4rectangle
 
 class Relative_Position(object):
     def __init__(self, image_batch,transform=None, show=False,patch_size=64 ,labels_path="/home/aras/Desktop/"):
-        self.bs, _, self.h, self.w = image_batch.shape
+        self.bs, _, self.h, _ = image_batch.shape
+        self.init_h = self.h
         self.patch_size = patch_size
         self.jitter = 7
-        self.patch_gap= 1.5*self.patch_size
-        self.cropsize = self.patch_size *4 + self.jitter*2
+        self.patch_gap= 1.5*self.patch_size if patch_size<65 else 1.25*self.patch_size
+        self.cropsize = self.patch_size + self.patch_gap*2 + self.jitter*2
+
+        self.aug_size =352
+        self.resize = torch.nn.Upsample(size = (self.aug_size,self.aug_size))
+        self.h = self.aug_size if patch_size >64 else self.h
 
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
@@ -33,6 +38,9 @@ class Relative_Position(object):
         #                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
         for idx, image in enumerate(self.image_batch):
+
+            if self.patch_size == 96:
+                image = self.resize(image.view(1,1,self.init_h,-1)).view(1,self.h,self.h)
 
             [srow, scol] = np.random.randint(self.h - self.cropsize - 1, size=2)
             patch1, patch2, direction, cord_list1, cord_list2 , patch_cord = self.random_adjecent_patches(image, srow, scol)
@@ -90,8 +98,6 @@ class Relative_Position(object):
 
         a_row, a_col = int(srow + a_row_jitter + patch_cord[0][0]*self.patch_gap),  int(scol + a_col_jitter + patch_cord[0][1]*self.patch_gap)
         b_row, b_col = int(srow + b_row_jitter + patch_cord[1][0]*self.patch_gap),  int(scol + b_col_jitter + patch_cord[1][1]*self.patch_gap)
-        #print(a_row, a_col)
-        #print(b_row, b_col)
 
         patch_a = image[0, a_row:a_row+self.patch_size , a_col:a_col+self.patch_size]
         patch_b = image[0, b_row:b_row+self.patch_size, b_col:b_col+self.patch_size]
@@ -107,7 +113,7 @@ class Relative_Position(object):
     def show_cropped_patches(self, image, patch1, patch2, direction, cord_list1, cord_list2, srow, scol, patch_cord):
         # cordlist->[(row_s,row_e),(col_s,col_e)]
         gridimage_delete_later = image.clone()
-        gridimage_delete_later = gridimage_delete_later.view(self.h, self.w)
+        gridimage_delete_later = gridimage_delete_later.view(self.h, self.h)
 
         label_img = mpimg.imread(self.labels_path)
         plt.imshow(label_img)

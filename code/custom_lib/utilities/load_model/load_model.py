@@ -60,7 +60,7 @@ class Load_Model(object):
                     if self.combo:
                         self.set_head_ccgan()
                         ss_name = "_".join(["".join([key + str(self.kwargs[ss][key[1:]]) for key in self.param_names_dict[ss]]) for ss in self.combo])
-                        print("parti  ", ss_name)
+                        #print("parti  ", ss_name)
 
                         file_name = self.method + "".join([key + str(self.kwargs["Common"][key]) for key in self.kwargs["Common"].keys()])+ss_name+".tar"
 

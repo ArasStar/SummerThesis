@@ -27,6 +27,8 @@ class Rotation(object):
                 self.show_rotated_patches(rotated_patches, label)
 
             if self.transform:
+                 rotated_patches=rotated_patches.view(4,1,self.h, self.h)
+
                  rotated_patches = torch.stack([self.transform(x_i)
                      for i, x_i in enumerate(torch.unbind(rotated_patches, dim=0))], dim=0)
 

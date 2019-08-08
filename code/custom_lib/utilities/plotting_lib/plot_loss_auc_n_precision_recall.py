@@ -117,7 +117,7 @@ class Curves_AUC_PrecionnRecall(object):
       avergare_dif = '\nAverage auc: {0:.3} \t CheXpert average auc {1:.3}\t Difference {2:.3}\n'.format(avg_auc,avg_chexpert_auc,avg_chexpert_auc-avg_auc)
       file_obj.write(avergare_dif)
       file_obj.write("\n" + self.model_name)
-
+      file_obj.close()
       print(avergare_dif)
       #line_new = '{:>12}  {:>12}  {:>12}'.format(word[0], word[1], word[2])
 

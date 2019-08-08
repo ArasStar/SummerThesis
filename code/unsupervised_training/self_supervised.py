@@ -54,7 +54,7 @@ else:
     device = torch.device('cpu')
 
 
-def self_train(method="",num_epochs=3, learning_rate=0.00005, batch_size=16, resize=320 ,K=4, patch_size = 64, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
+def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resize=320 ,K=4, patch_size = 64, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
  combo=[], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False,batch_factor=False):
 
 
@@ -73,10 +73,7 @@ def self_train(method="",num_epochs=3, learning_rate=0.00005, batch_size=16, res
                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
 
   transform_after_patching= transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
-  '''
-  transform_after_patching= transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-                                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-  '''
+
 
   #constant vars
   kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
@@ -95,11 +92,11 @@ def self_train(method="",num_epochs=3, learning_rate=0.00005, batch_size=16, res
   if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
 
 
-  labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train_labels.pt"
-  cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/self_train.csv",
-                                            transform_train,batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, num_workers=5)
+  labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/labels.pt"
+  cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/train.csv",
+                                            transform_train, batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, num_workers=5)
 
-  print("device", device)
+
   model=model.to(device=device)
   model.train()
   currentDT = datetime.datetime.now()
@@ -122,11 +119,11 @@ def self_train(method="",num_epochs=3, learning_rate=0.00005, batch_size=16, res
             h_id = i % n_heads
             iter_count[h_id] += 1
 
-
         head_dict = head_arch[h_id]
         model.classifier = head_dict["head"]
         patcher = head_dict["patch_func"](image_batch= images,**head_dict["args"])
         optimizer= head_dict['optimizer']
+
 
         patches, labels =  patcher()
         patches = patches.to(device = device, dtype = torch.float32)
@@ -146,9 +143,10 @@ def self_train(method="",num_epochs=3, learning_rate=0.00005, batch_size=16, res
 
         loss.backward()                                   # Backward pass: compute the weight
 
-        if n_heads ==1 and loss<0.00009:
+        if n_heads ==1 and loss<0.00009 and i >5000:
             print("early_stop")
             break
+
         if batch_factor and (i+1) % batch_factor == 0:
             optimizer.step()
         elif not batch_factor:
@@ -158,7 +156,8 @@ def self_train(method="",num_epochs=3, learning_rate=0.00005, batch_size=16, res
 
         if iter_count[h_id] % 200 == 0 and batch_count == 1:
             #print(i,"hooop",iter_count[h_id])
-            plot_loss[head_dict['head_name']].append(loss)
+            plot_loss[head_dict['head_name']].append(loss.item())
+
             #print(len(plot_loss[head_dict['head_name']]))
 
         if (i+1) % 100 == 0:                              # Logging
@@ -215,40 +214,37 @@ combo_all = ["Rotation","Relative_Position","Jigsaw"]
 
 p = saved_model_PATH +'saved_models/self_supervised/'
 
-schedule=[ {"num_epochs":3,"from_checkpoint":p+"Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-          ,{"num_epochs":3,"from_checkpoint":p+"Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0/Relative_Position_num_epochs3_batch_size16_learning_rate0.0001_split3.0.tar"}
-          ,{"num_epochs":3,"from_checkpoint":p+"naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs3_batch_size16_learning_rate0.0001_split3.0_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}]
 
 
 
-schedule = [#{"method":"Relative_Position","num_epochs":2}
+schedule = [{"method":"Relative_Position","num_epochs":2,"patch_size":32}
+           ,{"method":"Relative_Position","num_epochs":2,"patch_size":64}
+           ,{"method":"Relative_Position","num_epochs":2,"patch_size":96}
 
-           #,{"method":"Jigsaw","num_epochs":1,"perm_set_size":100}
-           #,{"method":"Jigsaw","num_epochs":1,"perm_set_size":500}
-           {"method":"Jigsaw","num_epochs":1,"perm_set_size":1000}
+           ,{"method":"Jigsaw","num_epochs":1,"perm_set_size":100}
+           ,{"method":"Jigsaw","num_epochs":1,"perm_set_size":500}
+           ,{"method":"Jigsaw","num_epochs":1,"perm_set_size":1000}
 
-           #,{"method":"Rotation","num_epochs":1,"batch_size":4,"batch_factor":4}
+           ,{"method":"Rotation","num_epochs":1,"batch_size":4,"batch_factor":4}
 
-           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":100}
-           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":500}
-           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":500}
+           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":100,"patch_size":96}
+           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":1000,"patch_size":96}
 
-           ,{"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4}
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4}
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":500,"batch_size":4,"batch_factor":4}
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4}
+           ,{"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4,"patch_size":96}
 
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4}
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":500,"batch_size":4,"batch_factor":4}
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4}
+           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
 
-
-           ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4}
-           ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":500,"batch_size":4,"batch_factor":4}
-           ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4}]
+           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
 
 
-#schedule = [{"method":"Jigsaw","num_epochs":1}]
+           ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+           ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
+
+
+#schedule = [   {"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
+
 
 import time
 #min = 60
