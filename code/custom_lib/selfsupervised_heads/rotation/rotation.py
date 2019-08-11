@@ -6,14 +6,14 @@ import matplotlib.patches as patches4rectangle
 
 
 class Rotation(object):
-    def __init__(self, image_batch, K=4, gpu=False, show=False,transform= None):
+    def __init__(self, image_batch, K=4, gpu=False, show=False,transform= None, resize = 320):
 
         self.bs, _, self.h, self.w = image_batch.shape
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
         self.K = K
         self.device = torch.device('cuda') if gpu else torch.device('cpu')
-        self.transform = transform
+        self.transform = transforms.Compose([transforms.ToPILImage(), transforms.Resize((resize,resize)), transforms.ToTensor(), transforms.Lambda(lambda x: torch.cat([x, x, x], 0))]) if resize==320  else transform
 
     def __call__(self):
 

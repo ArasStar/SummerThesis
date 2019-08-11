@@ -6,9 +6,13 @@ import matplotlib.patches as patches4rectangle
 
 
 class Jigsaw(object):
-    def __init__(self, image_batch,perm_set_size, path_permutation_set, grid_crop_size=255, patch_crop_size=64, gpu=False, show=False,transform= None):
+    def __init__(self, image_batch,perm_set_size, path_permutation_set, grid_crop_size=225, patch_crop_size=64, gpu=False, show=False,transform= None):
 
-        self.bs, _, self.h, self.w = image_batch.shape
+        self.bs, _, self.h, _ = image_batch.shape
+        self.size = 320 if self.h < 256 else self.h
+
+
+
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
 
@@ -22,6 +26,8 @@ class Jigsaw(object):
         assert(path_permutation_set.__contains__(str(perm_set_size))), "path file and perm set size not matching"
         self.permutation_set = torch.load(path_permutation_set, map_location=self.device)
         self.transform = transform
+        self.exra_transform = transforms.Compose([transforms.ToPILImage(), transforms.Resize((320,320)), transforms.ToTensor()])
+
 
     def __call__(self):
 
@@ -29,6 +35,9 @@ class Jigsaw(object):
         labels = np.empty(self.bs)
 
         for idx, image in enumerate(self.image_batch):
+
+
+            image = self.exra_transform(image) if self.h <256 else image
 
             permuted_patches, label, shiftcol, shiftrow, cord_patches  = self.puzzled_patches(image)
 
@@ -48,7 +57,7 @@ class Jigsaw(object):
 
     def puzzled_patches(self, image):
 
-        [srow, scol] = np.random.randint(self.h - self.grid_crop_size - 1, size=2)
+        [srow, scol] = np.random.randint(self.size - self.grid_crop_size - 1, size=2)
 
         patches, cord_patches = self.get_patches(image,srow, scol)
 

@@ -39,6 +39,8 @@ root_PATH = "/homes/ay1218/Desktop/"
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/relative_position')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/jigsaw')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/rotation')
+
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/chexpert_load')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/load_model')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/plotting_lib')
@@ -134,7 +136,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
     currentDT = datetime.datetime.now()
 
     netD.to(device)
-    ss_GAN_head = netD.discriminator.classifier
+    cc_GAN_head = netD.discriminator.classifier
     netG.to(device)
     print("Starting Training Loop...")
     print(file_name)
@@ -148,7 +150,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             real_images = real_images.to(device=device,dtype=torch.float)
             # Real img to 3 channel for D and patcher for G
             patcher = cc_gan.Patcher_CC_GAN(real_images,**kwargs_cc_gan_patch)#, transform = transform_after_patching)
-            temp_real_images = real_images.clone()
+            temp_real_images = real_images.clone().cpu()
             real_images = torch.stack([channel3(r_im) for r_im in real_images ])
             class_labels = class_labels.to(device=device,dtype=torch.float)
 
@@ -192,7 +194,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
                 #print(i,"noo index_list",index_list)
                 errD_self = ss_criterion(output_patch,patch_labels)
                 errD_self.backward()
-                netD.discriminator.classifier=ss_GAN_head
+                netD.discriminator.classifier=cc_GAN_head
 
             #SELF SUPERVISION###########
 
@@ -412,7 +414,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
         save_dict['ss_model_head']= dict(zip(head_name_list,head_state_list)),#saving name of the method and the head state
         save_dict['ss_optimizer_state_dict']= dict(zip(head_name_list, optimizer_state_list))
-        save_dict['ccgan_head']= ss_GAN_head.state_dict()
+        save_dict['ccgan_head']= cc_GAN_head.state_dict()
 
 
     torch.save(save_dict, PATH)
@@ -428,16 +430,23 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
                                              transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
 perm_set_size = 500
+patch_size=96
+rot_size = 128
 PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
+
+
+kwarg_Relative_Position_old = {"split":3,"transform":transform_after_patching,"show":False,"labels_path":root_PATH}
+kwarg_Rotation = {"K":4,"resize":rot_size,"transform":transform_after_patching,"show":False}
 kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":225, "patch_crop_size":64, "transform" :transform_after_patching, "gpu": use_cuda, "show":False }
-kwarg_Relative_Position = {"split":3,"transform":transform_after_patching,"show":False,"labels_path":root_PATH}
-kwargs_self={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position}
+kwarg_Relative_Position = {"patch_size":patch_size,"transform":transform_after_patching,"show":False,"labels_path":root_PATH}
+
+kwargs_self={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation}
 
 
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16},
+            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":1,},
             {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             {"self_supervised":kwargs_self,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             {"self_supervised":kwargs_self,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
