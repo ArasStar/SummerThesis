@@ -5,8 +5,9 @@ import torch
 import relative_position
 import jigsaw
 import rotation
+import relative_position_old
 
-head_libs={"Relative_Position":relative_position ,"Jigsaw":jigsaw,"Rotation":rotation}
+head_libs={"Relative_Position":relative_position ,"Jigsaw":jigsaw,"Rotation":rotation,"Relative_Position_old":relative_position_old}
 
 
 class Load_Model(object):
@@ -18,14 +19,14 @@ class Load_Model(object):
         self.from_checkpoint = from_checkpoint
         self.pre_trained = pre_trained
         self.param_names_dict = { "Common":["_num_epochs", "_batch_size", "_learning_rate"]  ,"Jigsaw":["_perm_set_size", "_grid_crop_size", "_patch_crop_size"],
-                                "Relative_Position":["_patch_size"],"Rotation":["_K"]}
+                                "Relative_Position":["_patch_size"],"Rotation":["_K","_resize"],"Relative_Position_old":["_split"]}
         self.combo = combo
         self.kwargs = kwargs
         self.model= model
         self.head = None
         self.optimizer = optimizer
         self.optimizer_chex = None
-        self.out_D = "" if method=="TL" else {"Relative_Position":8 ,"Rotation":4,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
+        self.out_D = "" if method=="TL" else {"Relative_Position":8,"Relative_Position_old":8 ,"Rotation":4,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
         self.use_cuda = use_cuda
         self.plot_loss = plot_loss
 
@@ -62,7 +63,7 @@ class Load_Model(object):
                         ss_name = "_".join(["".join([key + str(self.kwargs[ss][key[1:]]) for key in self.param_names_dict[ss]]) for ss in self.combo])
                         #print("parti  ", ss_name)
 
-                        file_name = self.method + "".join([key + str(self.kwargs["Common"][key]) for key in self.kwargs["Common"].keys()])+ss_name+".tar"
+                        file_name = self.method+"*"+"*".join(self.combo)+"*" + "".join([key + str(self.kwargs["Common"][key]) for key in self.kwargs["Common"].keys()])+ss_name+".tar"
 
                     else:
                         file_name= self.method + "".join([key + str(self.kwargs["Common"][key]) for key in self.kwargs["Common"].keys()])+".tar"
@@ -187,12 +188,24 @@ class Load_Model(object):
         batch_size = int(from_checkpoint[start_i+10:end_i])
         self.kwargs["Common"]["batch_size"]= batch_size
 
+        if from_checkpoint.__contains__("split"):
+            #split
+            start_i = from_checkpoint.index('split')
+            split = float(from_checkpoint[start_i+5: start_i+6])
+            self.kwargs["Relative_Position_old"]["split"] = split
 
         if from_checkpoint.__contains__("patch_size"):
             #split
             start_i = from_checkpoint.index('patch_size')
             patch_size = float(from_checkpoint[start_i+10: start_i+12])
             self.kwargs["Relative_Position"]["patch_size"] = patch_size
+
+        if from_checkpoint.__contains__("resize"):
+            #split
+            start_i = from_checkpoint.index('resize')
+            resize = float(from_checkpoint[start_i+6: start_i+9])
+            self.kwargs["Rotation"]["resize"] = resize
+
 
         if from_checkpoint.__contains__("perm_set"):
             #perm set size

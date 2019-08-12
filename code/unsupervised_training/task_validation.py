@@ -32,6 +32,7 @@ head_libs={"Relative_Position":relative_position ,"Jigsaw":jigsaw,"Rotation":rot
 
 class Task_Validation(object):
     def __init__(self,full_file_path="", transform =  transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0))]) , gpu=True, resize=320):
+
         self.resize=resize
         self.gpu=gpu
         self.root_PATH = root_PATH
@@ -107,7 +108,8 @@ class Task_Validation(object):
     def load_from_checkpoint(self):
 
         file_name = self.file_name
-        if self.file_name.__contains__("combination"):
+
+        if self.file_name.__contains__("*"):
           self.head_combo = file_name[file_name.index("*")+1: file_name.index("*_num_epochs")].split("*")
 
         else:

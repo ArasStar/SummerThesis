@@ -54,7 +54,7 @@ else:
     device = torch.device('cpu')
 
 
-def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resize=320 ,K=4, patch_size = 64, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
+def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resize=320, rot_size=False ,split=3 ,K=4, patch_size = 64, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
  combo=[], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False,batch_factor=False):
 
 
@@ -78,10 +78,11 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
   #constant vars
   kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
   kwarg_Relative_Position = {"patch_size":patch_size,"transform":transform_after_patching,"show":show,"labels_path":root_PATH}
-  kwarg_Rotation = {"K":K,"transform":transform_after_patching,"show":show}
+  kwarg_Rotation = {"K":K,"resize":rot_size,"transform":transform_after_patching,"show":show}
+  kwarg_Relative_Position_old = {"split":split,"transform":transform_after_patching,"show":show,"labels_path":root_PATH}
 
   kwarg_Common ={"num_epochs":num_epochs,"learning_rate":learning_rate, "batch_size":batch_size*batch_factor if batch_factor else batch_size}
-  kwargs={"Common": kwarg_Common,"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation}
+  kwargs={"Common": kwarg_Common,"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation,"Relative_Position_old": kwarg_Relative_Position_old}
 
   loader = load_model.Load_Model(method=method, combo=combo, from_checkpoint =from_checkpoint, kwargs=kwargs, model=model, plot_loss=plot_loss ,use_cuda=use_cuda )
 
@@ -95,6 +96,9 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
   labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/labels.pt"
   cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/train.csv",
                                             transform_train, batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, num_workers=5)
+
+  #for TRIAAAL
+  file_name = "DUMMY" + file_name
 
 
   model=model.to(device=device)
@@ -123,7 +127,6 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
         model.classifier = head_dict["head"]
         patcher = head_dict["patch_func"](image_batch= images,**head_dict["args"])
         optimizer= head_dict['optimizer']
-
 
         patches, labels =  patcher()
         patches = patches.to(device = device, dtype = torch.float32)
@@ -221,26 +224,24 @@ schedule = [{"method":"Relative_Position","num_epochs":2,"patch_size":32}
            ,{"method":"Relative_Position","num_epochs":2,"patch_size":64}
            ,{"method":"Relative_Position","num_epochs":2,"patch_size":96}
 
-           ,{"method":"Jigsaw","num_epochs":1,"perm_set_size":100}
-           ,{"method":"Jigsaw","num_epochs":1,"perm_set_size":500}
-           ,{"method":"Jigsaw","num_epochs":1,"perm_set_size":1000}
+           ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":100}
+           ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":500}
+           ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":1000}
 
-           ,{"method":"Rotation","num_epochs":1,"batch_size":4,"batch_factor":4}
+           ,{"method":"Rotation","num_epochs":3,"batch_size":4,"batch_factor":4}
 
-           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":100,"patch_size":96}
-           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":1000,"patch_size":96}
+           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":100,"patch_size":96}]
 
-           ,{"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4,"patch_size":96}
+           # ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":1000,"patch_size":96}
+           #
+           # ,{"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4,"patch_size":96}
+           #
+           # ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+           # ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
 
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
-
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
-           ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
-
-
-           ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
-           ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
+           #
+           # ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+           # ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
 
 
 #schedule = [   {"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]

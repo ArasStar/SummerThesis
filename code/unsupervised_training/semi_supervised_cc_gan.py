@@ -440,16 +440,25 @@ kwarg_Rotation = {"K":4,"resize":rot_size,"transform":transform_after_patching,"
 kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":225, "patch_crop_size":64, "transform" :transform_after_patching, "gpu": use_cuda, "show":False }
 kwarg_Relative_Position = {"patch_size":patch_size,"transform":transform_after_patching,"show":False,"labels_path":root_PATH}
 
-kwargs_self={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation}
 
+
+kwargs_self_R = {"Rotation":kwarg_Rotation}
+kwargs_self_RP ={"Relative_Position": kwarg_Relative_Position}
+kwargs_self_J ={"Jigsaw": kwarg_Jigsaw}
+
+kwargs_self_J_RP ={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position}
+kwargs_self_J_R ={"Jigsaw": kwarg_Jigsaw,"Rotation":kwarg_Rotation}
+kwargs_self_R_RP ={"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation}
+
+kwargs_self_all ={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation}
 
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":1,},
-            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":256,"batch_size":16},
-            {"self_supervised":kwargs_self,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
-            {"self_supervised":kwargs_self,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
+            {"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":1,},
+            #{"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":256,"batch_size":16},
+            #{"self_supervised":kwargs_self_all,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
+            #{"self_supervised":kwargs_self_all,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
             ]
 
 #plotlosssss self supervising task losses check SELFSUPERISING PY
