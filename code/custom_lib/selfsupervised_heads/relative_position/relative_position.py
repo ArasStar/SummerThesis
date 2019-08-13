@@ -40,7 +40,7 @@ class Relative_Position(object):
         for idx, image in enumerate(self.image_batch):
 
             if self.patch_size == 96:
-                image = self.resize(image.view(1,1,self.init_h,-1)).view(1,self.h,self.h)
+                image = self.resize(image.view(1,3,self.init_h,-1)).view(3,self.h,self.h)
 
             [srow, scol] = np.random.randint(self.h - self.cropsize - 1, size=2)
             patch1, patch2, direction, cord_list1, cord_list2 , patch_cord = self.random_adjecent_patches(image, srow, scol)
@@ -51,18 +51,18 @@ class Relative_Position(object):
             if self.transform:
                 h_patch, w_patch = patch1.shape
 
-                patch1 = patch1.view(1, h_patch, w_patch)
-                patch2 = patch2.view(1, h_patch, w_patch)
+                #patch1 = patch1.view(1, h_patch, w_patch)
+                #patch2 = patch2.view(1, h_patch, w_patch)
 
                 patch1 = self.transform(patch1)
                 patch2 = self.transform(patch2)
 
-                patch1 = patch1.view(1, 3, h_patch, w_patch)
-                patch2 = patch2.view(1, 3, h_patch, w_patch)
+                #patch1 = patch1.view(1, 3, h_patch, w_patch)
+                #patch2 = patch2.view(1, 3, h_patch, w_patch)
             else:
-                h_patch, w_patch = patch1.shape
-                patch1 = patch1.view(1, 1, h_patch, w_patch)
-                patch2 = patch2.view(1, 1, h_patch, w_patch)
+                patch1 = patch1.view(1, 3, self.patch_size, self.patch_size)
+                patch2 = patch2.view(1, 3, self.patch_size, self.patch_size)
+
             pair = torch.cat((patch1, patch2))
 
             patches = torch.cat((patches, pair))
@@ -99,8 +99,8 @@ class Relative_Position(object):
         a_row, a_col = int(srow + a_row_jitter + patch_cord[0][0]*self.patch_gap),  int(scol + a_col_jitter + patch_cord[0][1]*self.patch_gap)
         b_row, b_col = int(srow + b_row_jitter + patch_cord[1][0]*self.patch_gap),  int(scol + b_col_jitter + patch_cord[1][1]*self.patch_gap)
 
-        patch_a = image[0, a_row:a_row+self.patch_size , a_col:a_col+self.patch_size]
-        patch_b = image[0, b_row:b_row+self.patch_size, b_col:b_col+self.patch_size]
+        patch_a = image[:, a_row:a_row+self.patch_size , a_col:a_col+self.patch_size]
+        patch_b = image[:, b_row:b_row+self.patch_size, b_col:b_col+self.patch_size]
         dir = patch_cord[-1]
 
 
@@ -131,7 +131,7 @@ class Relative_Position(object):
 
         fig, ax = plt.subplots(1)
 
-        pil_gridimage_delete_later = transforms.ToPILImage()(gridimage_delete_later)
+        pil_gridimage_delete_later = transforms.ToPILImage()(gridimage_delete_later[0])
         ax.imshow(pil_gridimage_delete_later, cmap='Greys_r')
         rect = patches4rectangle.Rectangle((col_start1, row_start1), self.patch_size-2, self.patch_size-2, linewidth=3,
                                            edgecolor='r', facecolor='none',ls ="--")
@@ -158,12 +158,12 @@ class Relative_Position(object):
 
         fig = plt.figure()
         plt.subplot(1, 2, 1)
-        pil_patch1 = transforms.ToPILImage()(patch1)
+        pil_patch1 = transforms.ToPILImage()(patch1[0])
         plt.imshow(pil_patch1, cmap='Greys_r')
         plt.title('patch1-red',color='red')
 
         plt.subplot(1, 2, 2)
-        pil_patch2 = transforms.ToPILImage()(patch2)
+        pil_patch2 = transforms.ToPILImage()(patch2[0])
         plt.imshow(pil_patch2, cmap='Greys_r')
         plt.title('patch2-blue',color='blue')
         plt.show()

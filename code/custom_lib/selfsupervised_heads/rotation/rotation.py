@@ -13,7 +13,7 @@ class Rotation(object):
         self.image_batch = image_batch
         self.K = K
         self.device = torch.device('cuda') if gpu else torch.device('cpu')
-        self.transform = transforms.Compose([transforms.ToPILImage(), transforms.Resize((resize,resize)), transforms.ToTensor(), transforms.Lambda(lambda x: torch.cat([x, x, x], 0))]) if resize==320  else transform
+        self.transform = transforms.Compose([transforms.ToPILImage(), transforms.Resize((resize,resize))]) if resize!=320  else transform
 
     def __call__(self):
 
@@ -21,14 +21,13 @@ class Rotation(object):
         labels =  torch.Tensor()
 
         for idx, image in enumerate(self.image_batch):
-            rotated_patches ,label  = self.rotated_patches(image.view(self.h,self.w))
+            #print(image.shape)
+            rotated_patches ,label  = self.rotated_patches(image)
 
             if idx == 1 and self.show:
                 self.show_rotated_patches(rotated_patches, label)
 
             if self.transform:
-                 rotated_patches=rotated_patches.view(4,1,self.h, self.h)
-
                  rotated_patches = torch.stack([self.transform(x_i)
                      for i, x_i in enumerate(torch.unbind(rotated_patches, dim=0))], dim=0)
 
@@ -38,32 +37,33 @@ class Rotation(object):
         return patches, labels
 
     def rotated_patches(self,image):
-        rotated_patches = torch.empty(self.K,self.h, self.w)
+        rotated_patches = torch.empty(self.K,3,self.h, self.w)
         labels = torch.arange(self.K).type(torch.FloatTensor)
+
 
         if self.K==4:
          #0 degree
          rotated_patches[0]= image
          # 90 degree
-         rotated_patches[1]=image.t().flip(dims=[0])
+         rotated_patches[1]=image.permute([0,2,1]).flip(dims=[1])
 
          #180 degree
-         rotated_patches[2]=image.flip(dims=[0]).flip(dims=[1])
+         rotated_patches[2]=image.flip(dims=[1]).flip(dims=[2])
 
          #270 degree
-         rotated_patches[3]=image.flip(dims=[0]).t()
+         rotated_patches[3]=image.flip(dims=[1]).permute([0,2,1])
 
         else:
             print("not implemented other K values then 4")
 
-        return rotated_patches.view(-1,self.h,self.w),labels
+        return rotated_patches,labels
 
     def show_rotated_patches(self,rotated_images,labels):
 
         fig, ax = plt.subplots(1, self.K, sharex='col', sharey='row', figsize=(10, 3))
 
         for k in range(self.K):
-            r = transforms.ToPILImage()(rotated_images[k, :, :])
+            r = transforms.ToPILImage()(rotated_images[k,0, :, :])
             ax[k].imshow(r, cmap='Greys_r')
             ax[ k].set_title(str(k*90)+ " degree")
 

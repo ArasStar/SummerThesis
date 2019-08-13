@@ -31,7 +31,7 @@ import rotation
 head_libs={"Relative_Position":relative_position ,"Jigsaw":jigsaw,"Rotation":rotation}
 
 class Task_Validation(object):
-    def __init__(self,full_file_path="", transform =  transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0))]) , gpu=True, resize=320):
+    def __init__(self,full_file_path="", transform =  transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0))]) , gpu=True, resize=320,normalize=False):
 
         self.resize=resize
         self.gpu=gpu
@@ -48,6 +48,7 @@ class Task_Validation(object):
         self.out_D = {"Relative_Position":8 ,"Rotation":4,"Jigsaw":None}
         self.transform_after_patching =transform
         self.heads = None
+        self.normalize= normalize
 
     def __call__(self):
 
@@ -60,7 +61,11 @@ class Task_Validation(object):
 
     def validate(self,head):
 
-        transform= transforms.Compose([  transforms.Resize((self.resize,self.resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
+        if self.normalize:
+            transform= transforms.Compose([  transforms.Resize((self.resize,self.resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
+
+        else:
+            transform= transforms.Compose([  transforms.Resize((self.resize,self.resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
         cheXpert_valid_dataset, valid_dataloader = chexpert_load.chexpert_load(self.root_PATH+"SummerThesis/code/custom_lib/chexpert_load/valid.csv",transform,
                                                                  8, shuffle=False, root_dir = self.root_PATH_dataset)
         self.model.classifier = head["head"]

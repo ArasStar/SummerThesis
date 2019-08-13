@@ -11,8 +11,6 @@ class Jigsaw(object):
         self.bs, _, self.h, _ = image_batch.shape
         self.size = 320 if self.h < 256 else self.h
 
-
-
         self.show = show  # print cropped images and show where they are 1 time for each batch
         self.image_batch = image_batch
 
@@ -35,7 +33,6 @@ class Jigsaw(object):
         labels = np.empty(self.bs)
 
         for idx, image in enumerate(self.image_batch):
-
 
             image = self.exra_transform(image) if self.h <256 else image
 
@@ -69,7 +66,7 @@ class Jigsaw(object):
     def get_patches(self, image, srow, scol):
 
         # dive a 225x225 grid to 3x3
-        patches = torch.empty(9,self.patch_crop_size, self.patch_crop_size)
+        patches = torch.empty(9,3,self.patch_crop_size, self.patch_crop_size)
         #non_transformed_patches = torch.empty(9,self.patch_crop_size, self.patch_crop_size)
 
         cord_patches = []
@@ -86,7 +83,7 @@ class Jigsaw(object):
                 col_start = p_scol +  scol + self.grid_patch_size * j;
                 col_finit = col_start + self.patch_crop_size
 
-                patches[patch_n,:, :]= image[:, row_start:row_finit, col_start:col_finit]
+                patches[patch_n,:,:, :]= image[:, row_start:row_finit, col_start:col_finit]
                 cord_patches.append((p_scol, p_srow))
 
                 patch_n = patch_n + 1
@@ -106,7 +103,7 @@ class Jigsaw(object):
     def show_cropped_patches(self, image, shift_col, shift_row, permuted_patches, cord_patches, label):
         # Preparing
 
-        image_draw = transforms.ToPILImage()(image)
+        image_draw = transforms.ToPILImage()(image[0,:,:])
         perm_set = self.permutation_set[label]
         perm_label =(perm_set.cpu().numpy())
         # font = ImageFont.truetype("arial.ttf", fontsize)
@@ -160,7 +157,7 @@ class Jigsaw(object):
 
             j = idx % 3
 
-            patch_show = transforms.ToPILImage()(permuted_patches[idx,:, :])
+            patch_show = transforms.ToPILImage()(permuted_patches[idx,0,:, :])
             ax2[i, j].imshow(patch_show, cmap='Greys_r')
             ax2[i, j].axis('off')
 
@@ -183,7 +180,7 @@ class Jigsaw(object):
 
             j = idx % 3
 
-            patch_show = transforms.ToPILImage()(permuted_patches[index, :, :])
+            patch_show = transforms.ToPILImage()(permuted_patches[index,0, :, :])
             ax3[i, j].imshow(patch_show, cmap='Greys_r')
             ax3[i, j].axis('off')
 

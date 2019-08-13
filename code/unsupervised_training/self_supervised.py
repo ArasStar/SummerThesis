@@ -54,7 +54,7 @@ else:
     device = torch.device('cpu')
 
 
-def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resize=320, rot_size=False ,split=3 ,K=4, patch_size = 64, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
+def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resize=320, rot_size=320 ,split=3 ,K=4, patch_size = 64, grid_crop_size=225,patch_crop_size=64,perm_set_size=500 ,from_checkpoint=None ,
  combo=[], root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False,batch_factor=False):
 
 
@@ -66,14 +66,13 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
   #Setting permuation_set
   PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
   #just ToTensor before patch
-  transform_train= transforms.Compose([  transforms.Resize((resize,resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
+  transform_train= transforms.Compose([  transforms.Resize((resize,resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor(),transforms.Normalize((0.5,), (0.5,)),
+                                                                                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
 
   #after patch transformation
-  transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
-                                               transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
 
   transform_after_patching= transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
-
+  transform_after_patching= None
 
   #constant vars
   kwarg_Jigsaw = { "perm_set_size": perm_set_size, "path_permutation_set":PATH_p_set, "grid_crop_size":grid_crop_size, "patch_crop_size":patch_crop_size, "transform" :transform_after_patching, "gpu": use_cuda, "show":show }
@@ -96,9 +95,6 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
   labels_path= root_PATH + "SummerThesis/code/custom_lib/chexpert_load/labels.pt"
   cheXpert_train_dataset, dataloader = chexpert_load.chexpert_load(root_PATH + "SummerThesis/code/custom_lib/chexpert_load/train.csv",
                                             transform_train, batch_size, labels_path=labels_path,root_dir = root_PATH_dataset, num_workers=5)
-
-  #for TRIAAAL
-  file_name = "DUMMY" + file_name
 
 
   model=model.to(device=device)
@@ -220,9 +216,9 @@ p = saved_model_PATH +'saved_models/self_supervised/'
 
 
 
-schedule = [{"method":"Relative_Position","num_epochs":2,"patch_size":32}
+schedule = [{"method":"Relative_Position","num_epochs":2,"patch_size":96}
            ,{"method":"Relative_Position","num_epochs":2,"patch_size":64}
-           ,{"method":"Relative_Position","num_epochs":2,"patch_size":96}
+           ,{"method":"Relative_Position","num_epochs":2,"patch_size":32}
 
            ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":100}
            ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":500}

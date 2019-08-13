@@ -121,8 +121,6 @@ class Load_Model(object):
 
         self.head = heads
 
-
-
     def load_from_checkpoint(self):
 
         from_checkpoint = self.from_checkpoint
