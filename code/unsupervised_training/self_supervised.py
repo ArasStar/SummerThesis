@@ -240,7 +240,8 @@ schedule = [{"method":"Relative_Position","num_epochs":2,"patch_size":96}
            # ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
 
 
-#schedule = [   {"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
+#schedule = [  {"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96,"show":True}]
+
 
 
 import time

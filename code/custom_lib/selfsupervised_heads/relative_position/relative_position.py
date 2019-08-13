@@ -112,8 +112,8 @@ class Relative_Position(object):
 
     def show_cropped_patches(self, image, patch1, patch2, direction, cord_list1, cord_list2, srow, scol, patch_cord):
         # cordlist->[(row_s,row_e),(col_s,col_e)]
-        gridimage_delete_later = image.clone()
-        gridimage_delete_later = gridimage_delete_later.view(self.h, self.h)
+        gridimage_delete_later = image[0].clone()
+        #gridimage_delete_later = gridimage_delete_later.view(1,self.h, self.h)
 
         label_img = mpimg.imread(self.labels_path)
         plt.imshow(label_img)
@@ -131,7 +131,7 @@ class Relative_Position(object):
 
         fig, ax = plt.subplots(1)
 
-        pil_gridimage_delete_later = transforms.ToPILImage()(gridimage_delete_later[0])
+        pil_gridimage_delete_later = transforms.ToPILImage()(gridimage_delete_later)
         ax.imshow(pil_gridimage_delete_later, cmap='Greys_r')
         rect = patches4rectangle.Rectangle((col_start1, row_start1), self.patch_size-2, self.patch_size-2, linewidth=3,
                                            edgecolor='r', facecolor='none',ls ="--")
