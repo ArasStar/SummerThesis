@@ -216,17 +216,21 @@ p = saved_model_PATH +'saved_models/self_supervised/'
 
 
 
-schedule = [{"method":"Relative_Position","num_epochs":2,"patch_size":96}
-           ,{"method":"Relative_Position","num_epochs":2,"patch_size":64}
-           ,{"method":"Relative_Position","num_epochs":2,"patch_size":32}
+schedule = [
+           #  {"method":"Relative_Position","num_epochs":2,"patch_size":96}
+           # ,{"method":"Relative_Position","num_epochs":2,"patch_size":64}
+           # ,{"method":"Relative_Position","num_epochs":2,"patch_size":32}
+           #
+           # ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":100}
+           # ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":500}
+           #{"method":"Jigsaw","num_epochs":3,"perm_set_size":1000}
 
-           ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":100}
-           ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":500}
-           ,{"method":"Jigsaw","num_epochs":3,"perm_set_size":1000}
 
-           ,{"method":"Rotation","num_epochs":3,"batch_size":4,"batch_factor":4}
 
-           ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":100,"patch_size":96}]
+           {"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":100,"patch_size":96}
+
+           #,{"method":"Rotation","num_epochs":3,"batch_size":4,"batch_factor":4}
+           ]
 
            # ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":1000,"patch_size":96}
            #
@@ -239,6 +243,18 @@ schedule = [{"method":"Relative_Position","num_epochs":2,"patch_size":96}
            # ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
            # ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
 
+# schedule = [
+#
+#            {"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":1000,"patch_size":96}
+#
+#            ,{"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4,"patch_size":96}
+#
+#            ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+#            ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
+#
+#
+#            ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+#            ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
 
 #schedule = [  {"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96,"show":True}]
 
