@@ -13,7 +13,7 @@ class Rotation(object):
         self.image_batch = image_batch
         self.K = K
         self.device = torch.device('cuda') if gpu else torch.device('cpu')
-        self.transform = transforms.Compose([transforms.ToPILImage(), transforms.Resize((resize,resize))]) if resize!=320  else transform
+        self.transform = transforms.Compose([transforms.ToPILImage(), transforms.Resize((resize,resize)),transforms.ToTensor()]) if resize!=320  else transform
 
     def __call__(self):
 

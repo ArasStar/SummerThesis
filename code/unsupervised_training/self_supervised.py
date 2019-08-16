@@ -229,7 +229,7 @@ schedule = [
 
            {"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":100,"patch_size":96}
 
-           #,{"method":"Rotation","num_epochs":3,"batch_size":4,"batch_factor":4}
+           ,{"method":"Rotation","num_epochs":3,"batch_size":4,"batch_factor":4}
            ]
 
            # ,{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":1000,"patch_size":96}
@@ -243,26 +243,29 @@ schedule = [
            # ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
            # ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
 
-# schedule = [
-#
-#            {"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":1000,"patch_size":96}
-#
-#            ,{"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4,"patch_size":96}
-#
-#            ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
-#            ,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
-#
-#
-#            ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
-#            ,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}]
+schedule = [
+
+           #{"method":"naive_combination","combo":combo_RPnJ,"num_epochs":2,"perm_set_size":1000,"patch_size":96}
+
+           #,{"method":"naive_combination","combo":combo_RPnR,"num_epochs":2,"batch_size":4,"batch_factor":4,"patch_size":96}
+
+           #,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+           #,{"method":"naive_combination","combo":combo_RnJ,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
+
+
+           {"method":"naive_combination","combo":combo_all,"num_epochs":4,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96}
+           #,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
+           ]
 
 #schedule = [  {"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96,"show":True}]
 
 
 
 import time
-#min = 60
-#time.sleep(2*60*min)
+min = 60
+hour = 60*min
+#print("sleeping")
+#time.sleep(4*hour)
 
 for kwargs in schedule:
   self_train(**kwargs)

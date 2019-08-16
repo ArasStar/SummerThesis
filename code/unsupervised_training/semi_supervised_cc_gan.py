@@ -49,6 +49,7 @@ sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/semi_supervised_CC_GA
 import chexpert_load
 import load_model
 import cc_gan
+import plot_loss_auc_n_precision_recall
 
 use_cuda = True
 if use_cuda and torch.cuda.is_available():
@@ -71,9 +72,11 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             kwargs[key] = self_supervised[key]
 
     #just ToTensor before patch
+    channel3= transforms.Compose([  transforms.Normalize((0.5,), (0.5,)), transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
     channel3 = transforms.Lambda(lambda x: torch.cat([x, x, x], 0))
+
     transform_train= transforms.Compose([ transforms.Resize((resize,resize)), transforms.RandomHorizontalFlip(),
-                                          transforms.ToTensor()])#,transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
+                                          transforms.ToTensor()])
 
 
     #after patch transformation
@@ -121,10 +124,15 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
     loader = load_model.Load_Model(method= ("self_supervised_" if self_supervised else "") +method ,pre_trained = from_pretrained, from_checkpoint = from_checkpoint,
                                     kwargs=kwargs, model=[netG,netD], optimizer=[optimizerG,optimizerD], plot_loss=[G_losses,D_losses,C_losses], combo= list(self_supervised.keys()) if self_supervised else [] )
-    file_name  ,head_arch, [G_losses,D_losses,C_losses]   = loader()
+    file_name  ,head_arch, plot_loss    = loader()
+    if self_supervised:
+        [G_losses,D_losses,C_losses, self_plot_loss] = plot_loss
+    else:
+        [G_losses,D_losses,C_losses]= plot_loss
 
     if head_arch:
         n_heads= len(head_arch)
+        iter_count =   np.zeros(n_heads)
         ss_criterion = torch.nn.CrossEntropyLoss().to(device = device)
 
     saved_model_PATH = saved_model_PATH+  "saved_models/semi_supervised/"+ file_name[:-4]
@@ -146,12 +154,12 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
         for i, (real_images , class_labels , label_ok) in enumerate(dataloader):
 
             bs = real_images.shape[0]
-
-            real_images = real_images.to(device=device,dtype=torch.float)
             # Real img to 3 channel for D and patcher for G
             patcher = cc_gan.Patcher_CC_GAN(real_images,**kwargs_cc_gan_patch)#, transform = transform_after_patching)
-            temp_real_images = real_images.clone().cpu()
             real_images = torch.stack([channel3(r_im) for r_im in real_images ])
+            temp_real_images = real_images.clone().detach().cpu()
+
+            real_images = real_images.to(device=device,dtype=torch.float)
             class_labels = class_labels.to(device=device,dtype=torch.float)
 
             ############################
@@ -182,19 +190,33 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
             #SELF SUPERVISION###########
             if self_supervised:
-                head_dict = head_arch[i % n_heads]
+                h_id =i % n_heads
+                head_dict = head_arch[h_id]
+                iter_count[h_id] += 1
+
                 netD.discriminator.classifier = head_dict["head"]
+
                 ss_patcher = head_dict["patch_func"](image_batch= temp_real_images,**head_dict["args"])
+
                 optimizer_D_extra= head_dict['optimizer']
                 optimizer_D_extra.zero_grad()
+
                 patches, patch_labels =  ss_patcher()
                 patches = patches.to(device, dtype = torch.float32)
+
                 patch_labels = patch_labels.to(device, dtype = torch.long)
                 output_patch = netD(patches)
+
                 #print(i,"noo index_list",index_list)
                 errD_self = ss_criterion(output_patch,patch_labels)
+
+                if iter_count[h_id] % 200 == 1 :
+                    self_plot_loss[head_dict['head_name']].append(errD_self.item())
+
                 errD_self.backward()
+
                 netD.discriminator.classifier=cc_GAN_head
+
 
             #SELF SUPERVISION###########
 
@@ -212,7 +234,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
             '''PROBLEEEEEEm'''
             filled =context_conditioned.clone().to(device=device)
-            filled_fake =context_conditioned.clone().to(device=device)
+            #filled_fake =context_conditioned.clone().to(device=device)
             fake = fake.to(device=device)
 
             hole_size = cord[0]
@@ -270,15 +292,19 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             # Calculate G's loss based on this output
             errG = advs_criterion(output[:, 0], label)
             # Calculate gradients for G
-            errG.backward(retain_graph=True)
+
+            #errG.backward(retain_graph=True)
 
             #if CC-GAN2 then put X_g as an extra negative example
             if method == "CC_GAN2":
+                errG.backward(retain_graph=True)
                 output2 = netD(fake)
                 errG2 = advs_criterion( output2[:, 0], label)
                 D_G_z2_2 = sig(output2[:,0].view(-1)).mean().item()
                 errG2.backward()
                 errG = errG + errG2
+            else:
+                errG.backward()
 
 
             D_G_z2 = sig(output[:,0].view(-1)).mean().item()
@@ -317,7 +343,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (i % 2000 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
+            if (i % 100 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
 
                 # Generate fake image batch with G
                 with torch.no_grad():
@@ -352,6 +378,9 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
                                                         valid_batch2,fixed_context_conditioned2.cpu(), fake2.cpu(),fixed_filled2)).cpu(), padding=2, normalize=True,nrow=8)[0]
 
                 img_list.append(grid)
+
+                if i==2500:
+                    break
 
 
     print('training done')
@@ -414,8 +443,10 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
         save_dict['ss_model_head']= dict(zip(head_name_list,head_state_list)),#saving name of the method and the head state
         save_dict['ss_optimizer_state_dict']= dict(zip(head_name_list, optimizer_state_list))
-        save_dict['ccgan_head']= cc_GAN_head.state_dict()
 
+        save_dict['self_supervised_loss'] = self_plot_loss
+        curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(model_name=file_name,root_PATH= saved_model_PATH,mode="just_plot_loss")
+        curves.plot_loss(plot_loss=self_plot_loss)
 
     torch.save(save_dict, PATH)
 
@@ -427,9 +458,9 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
 
 
-transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(),
-                                             transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
-perm_set_size = 500
+#transform_after_patching= transforms.Compose([transforms.ToPILImage(), transforms.ToTensor(), transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
+transform_after_patching=None
+perm_set_size = 1000
 patch_size=96
 rot_size = 128
 PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
@@ -455,20 +486,20 @@ kwargs_self_all ={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Pos
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":1,},
+            {"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":2,"show":False, "resize":128,"batch_size":16,"num_epochs":1},
             #{"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             #{"self_supervised":kwargs_self_all,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             #{"self_supervised":kwargs_self_all,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
             ]
 
 #plotlosssss self supervising task losses check SELFSUPERISING PY
-'''
-schedule=[
-            {method":"CC_GAN","num_epochs":3,"show":False, "resize":320,"batch_size":16},
-            {"self_supervised":kwargs_self,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16},
 
-            ]
-'''
+# schedule=[
+#             {"method":"CC_GAN","num_epochs":1,"show":False, "resize":128,"batch_size":16},
+#             {"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16},
+#
+#             ]
+
 for kwargs in schedule:
   train_ccgan(**kwargs)
 

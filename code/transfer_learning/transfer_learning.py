@@ -185,40 +185,65 @@ schedule=[
         ]
 
 
-schedule=[ {"normalize":1,"num_epochs":3}#from scratch
-            #pre_trained on image_net
-          ,{"normalize":1,"num_epochs":3,"pre_trained":True}
-
-          #rotation K=4
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Rotation_num_epochs3_batch_size16_learning_rate0.0001_K4/Rotation_num_epochs3_batch_size16_learning_rate0.0001_K4.tar"}
-         #rel pos patch 96 epoch2
-         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size96/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size96.tar"}
-         #rel pos patch 64 epoch2
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size64/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size64.tar"}
-
-         #rel pos patch 32 epoch2
-         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size32/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size32.tar"}
-
-         #jigsaw pset100 epoch3
+schedule=[
+          #J 100
          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
-
-        #jigsaw pset500 epoch3
+          #J 500
          ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+          #J 1000
+         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size1000_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
 
-         #jigsaw pset1000 epoch3
-         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size1000_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
+          #RP 96 +J 100
+         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
 
-         # relpos + rotation  patch 96 K4 epoch2
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Rotation*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_K4/naive_combination*Relative_Position*Rotation*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_K4.tar"}
-
-          # relpos + jigsaw  patch 96 pset1000 epoch2
+          #RP 96 +J 1000
          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
 
-          # relpos + jigsaw  patch 96 pset100 epoch2
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
+          #RP 96 + Ro
+         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Rotation*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_K4_resize320/naive_combination*Relative_Position*Rotation*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_K4_resize320.tar"}
+
+          #Ro  + J 100
+         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
+
+          #Ro  + J 1000
+         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
+
+          # relpos + jigsaw +Ro  patch 96 pset1000  J 1000 epoch2
+         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
+
+          # relpos   patch 32
+
+          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size32/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size32.tar"}
+
+          # relpos   patch 96
+
+          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size96/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size96.tar"}
+
+          #Ro
+          ,{"normalize":1,"/vol/bitbucket/ay1218/saved_models/self_supervised/Rotation_num_epochs3_batch_size16_learning_rate0.0001_K4_resize320/Rotation_num_epochs3_batch_size16_learning_rate0.0001_K4_resize320.tar"}
 
 
         ]
+
+# schedule=[
+#
+#          #CC-GAN bs 16 resize320
+#          {"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/no_normalize_semi_supervised/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize320.tar"}
+#
+#          #CC-GAN bs 16 resize128
+#          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/no_normalize_semi_supervised/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128/CC_GAN_num_epochs3_learning_rate0.0002_batch_size16_resize128.tar"}
+#
+#          #CC-GAN2 bs 16 resize256
+#          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/no_normalize_semi_supervised/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize256_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize256_label_rate0.2.tar"}
+#
+#          #CC-GAN2 bs 16 resize128
+#          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/no_normalize_semi_supervised/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize128_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize128_label_rate0.2.tar"}
+#
+#          #CC-GAN bs 32 resize128
+#          #,{"normalize":1,""}"
+#         ]
+
+
 
 
 #min = 60

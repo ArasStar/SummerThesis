@@ -58,12 +58,12 @@ class Load_Model(object):
                 file_name = self.load_from_gan_checkpoint()
 
             else:#from from_scratch
-                    if self.combo:
+                    if self.combo:# if self supervised there
                         self.set_head_ccgan()
                         ss_name = "_".join(["".join([key + str(self.kwargs[ss][key[1:]]) for key in self.param_names_dict[ss]]) for ss in self.combo])
                         #print("parti  ", ss_name)
-
                         file_name = self.method+"*"+"*".join(self.combo)+"*" + "".join([key + str(self.kwargs["Common"][key]) for key in self.kwargs["Common"].keys()])+ss_name+".tar"
+                        self.plot_loss = self.plot_loss +[dict(zip(self.combo,[[] for i in range(len(self.combo))]))]
 
                     else:
                         file_name= self.method + "".join([key + str(self.kwargs["Common"][key]) for key in self.kwargs["Common"].keys()])+".tar"
@@ -126,8 +126,9 @@ class Load_Model(object):
         from_checkpoint = self.from_checkpoint
         if self.from_checkpoint.__contains__("combination"):
 
-          self.method = from_checkpoint[from_checkpoint.index("_supervised/")+12: from_checkpoint.index('combination')+11]
+          self.method = from_checkpoint[from_checkpoint.index('combination')-6: from_checkpoint.index('combination')+11]
           self.combo = from_checkpoint[from_checkpoint.index("*")+1: from_checkpoint.index("*_num_epochs")].split("*")
+          print(self.method_head)
           file_name = self.method+"*"+"*".join(self.combo)+"*"
 
         else:
