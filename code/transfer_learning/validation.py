@@ -9,13 +9,13 @@ from torchvision import transforms
 
 
 class Validation(object):
-    def __init__(self,bs=0,chexpert_load="", model="", plot_loss="",file_name="", root_PATH="", saved_model_PATH="",root_PATH_dataset = "", gpu=True, transform = ""):
+    def __init__(self,bs=0,chexpert_load="", model="", plot_loss="",file_name="", root_PATH="", saved_model_PATH="",root_PATH_dataset = "", gpu=True, transform = "",iter_num=200):
 
         self.model = model
         self.plot_loss = plot_loss
+        self.iter_num= iter_num
         self.bs = bs
-        self.transform = transform if transform else transforms.Compose([ transforms.Resize((320,320)), transforms.ToTensor(),transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-                                                                            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        self.transform = transform
         self.root_PATH = root_PATH
         self.saved_model_PATH = saved_model_PATH
         self.root_PATH_dataset = root_PATH_dataset
@@ -51,7 +51,7 @@ class Validation(object):
         # SAVING PLOTS and models
         curves =plot_loss_auc_n_precision_recall.Curves_AUC_PrecionnRecall(self.chexpert_load,cheXpert_valid_dataset, probs, acts, model_name= self.file_name,root_PATH= self.saved_model_PATH)
         curves()
-        curves.plot_loss(self.plot_loss)
+        curves.plot_loss(self.plot_loss,self.iter_num)
         curves.auc_difference_print()
 
 

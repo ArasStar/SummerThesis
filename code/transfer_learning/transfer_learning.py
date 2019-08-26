@@ -55,7 +55,7 @@ else:
     print("CUDA didn't work")
     device = torch.device('cpu')
 
-def transfer_learning(  num_epochs=3, resize= 320, batch_size=16,posw =1, data_rate=1, normalize=1,pre_trained=False, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH,learning_rate=0.0001,num_workers=5,
+def transfer_learning(  num_epochs=3, resize= 320, batch_size=16,posw =1, data_rate=1, normalize=False, feature_extract=False,pre_trained=False, pre_trained_PATH="", from_checkpoint="", root_PATH = root_PATH,learning_rate=0.0001,num_workers=5,
                                                         root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH):
 
     #batch transformation
@@ -99,6 +99,13 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16,posw =1, data_r
     file_name= "pre_trainedIMAGENET_"+file_name if  pre_trained else file_name
     file_name= "no_posw_"+file_name if not posw else file_name
     file_name= "normalized"+file_name if  normalize else file_name
+
+    if feature_extract:
+        for param in model.features.parameters():
+                param.requires_grad = False
+        optimizer = torch.optim.Adam(model.classifier.parameters(), lr=learning_rate)
+
+        file_name= "FE_"+file_name
 
 
 
@@ -151,7 +158,7 @@ def transfer_learning(  num_epochs=3, resize= 320, batch_size=16,posw =1, data_r
     # Calculating valid error plotting AUC , Precisinon -Recall , plot loss , saving figures, printingg auc differences
     PATH =  saved_model_PATH+"/"+file_name
 
-    val = validation.Validation(chexpert_load=chexpert_load,model=model, plot_loss=plot_loss, bs = 16, root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH = saved_model_PATH, file_name=file_name, gpu=use_cuda )
+    val = validation.Validation(chexpert_load=chexpert_load, model=model, plot_loss=plot_loss, bs = 16, transform=transform, root_PATH = root_PATH, root_PATH_dataset=root_PATH_dataset, saved_model_PATH = saved_model_PATH, file_name=file_name, gpu=use_cuda )
     val()
 
     torch.save({'epoch':  num_epochs ,
@@ -169,15 +176,12 @@ c = saved_model_PATH +'saved_models/transfer_learning/'
 self = saved_model_PATH +'saved_models/self_supervised/'
 
 #GANS
-semi =  saved_model_PATH +'saved_models/semi_supervised/'
+semi =  saved_model_PATH +'saved_models/no_normalize_semi_supervised/'
 
 #schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
-
-
 #GANS
 schedule=[
-
         {"pre_trained_PATH":semi+"CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize128_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize128_label_rate0.2.tar"}
         ,{"pre_trained_PATH": semi+"CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize256_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize256_label_rate0.2.tar"}
         ,{"pre_trained_PATH": semi+"CC_GAN2_num_epochs3_learning_rate0.0002_batch_size32_resize128_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size32_resize128_label_rate0.2.tar"}
@@ -185,45 +189,45 @@ schedule=[
         ]
 
 
-schedule=[
-          #J 100
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
-          #J 500
-         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
-          #J 1000
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size1000_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
-
-          #RP 96 +J 100
-         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
-
-          #RP 96 +J 1000
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
-
-          #RP 96 + Ro
-         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Rotation*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_K4_resize320/naive_combination*Relative_Position*Rotation*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_K4_resize320.tar"}
-
-          #Ro  + J 100
-         ,{"normalize":1,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
-
-          #Ro  + J 1000
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
-
-          # relpos + jigsaw +Ro  patch 96 pset1000  J 1000 epoch2
-         ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
-
-          # relpos   patch 32
-
-          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size32/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size32.tar"}
-
-          # relpos   patch 96
-
-          ,{"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size96/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size96.tar"}
-
-          #Ro
-          ,{"normalize":1,"/vol/bitbucket/ay1218/saved_models/self_supervised/Rotation_num_epochs3_batch_size16_learning_rate0.0001_K4_resize320/Rotation_num_epochs3_batch_size16_learning_rate0.0001_K4_resize320.tar"}
-
-
-        ]
+# schedule=[
+#          #  #J 100
+#          # {"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
+#          #  #J 500
+#          # ,{"data_rate":0.5,"pre_trained_PATH": "/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size500_grid_crop_size225_patch_crop_size64.tar"}
+#          #  #J 1000
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size1000_grid_crop_size225_patch_crop_size64/Jigsaw_num_epochs3_batch_size16_learning_rate0.0001_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
+#          #  #Ro
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Rotation_num_epochs3_batch_size16_learning_rate0.0001_K4/Rotation_num_epochs3_batch_size16_learning_rate0.0001_K4.tar"}
+#          # #Rel pos 32
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size32/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size32.tar"}
+#          # #Rel pos 64
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size64/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size64.tar"}
+#          # #rel pos 96
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size96/Relative_Position_num_epochs2_batch_size16_learning_rate0.0001_patch_size96.tar"}
+#
+#
+#          # #J 100+ RP
+#          # {"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
+#          #
+#          # #J 1000+RP
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
+#          #
+#          # # J100 +Ro
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_perm_set_size100_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_perm_set_size100_grid_crop_size225_patch_crop_size64.tar"}
+#          #
+#          # # J1000 +Ro
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
+#          #
+#          # #RP +Ro
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Relative_Position*Rotation*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_K4/naive_combination*Relative_Position*Rotation*_num_epochs2_batch_size16_learning_rate0.0001_patch_size96_K4.tar"}
+#          #
+#          # # J+Ro+RP epoch 2
+#          # ,{"data_rate":0.5,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Relative_Position*Jigsaw*_num_epochs2_batch_size16_learning_rate0.0001_K4_resize320_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
+#          #
+#          # # J+Ro+RP epoch 4
+#          # ,{"data_rate":0.5,"normalize":1,"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/self_supervised/naive_combination*Rotation*Relative_Position*Jigsaw*_num_epochs4_batch_size16_learning_rate0.0001_K4_resize320_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64/naive_combination*Rotation*Relative_Position*Jigsaw*_num_epochs4_batch_size16_learning_rate0.0001_K4_resize320_patch_size96_perm_set_size1000_grid_crop_size225_patch_crop_size64.tar"}
+#
+#         ]
 
 # schedule=[
 #
@@ -245,10 +249,9 @@ schedule=[
 
 
 
-
+#print("sleeping")
 #min = 60
-#time.sleep(4*60*min)
-
+#time.sleep(5*60*min)
 
 for kwargs in schedule:
 

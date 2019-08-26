@@ -60,7 +60,8 @@ else:
     device = torch.device('cpu')
 print(device)
 
-def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3, lr=0.0002, batch_size=16,noised=1, noise_size=100, label_rate=0.2 , num_workers=5, from_checkpoint=None, from_pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
+def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3, lr=0.0002, batch_size=16,noised=1, noise_size=100, self_coef=0.1,
+    label_rate=0.2 , num_workers=5, from_checkpoint=None, from_pretrained = None ,root_PATH = root_PATH ,root_PATH_dataset=root_PATH_dataset, saved_model_PATH=saved_model_PATH, show=False):
 
     kwargs_cc_gan_patch ={"show":show, "gpu" : use_cuda}
     kwarg_Common ={"num_epochs":num_epochs,"learning_rate":lr,"batch_size":batch_size,"resize":resize,"label_rate":label_rate}
@@ -72,7 +73,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             kwargs[key] = self_supervised[key]
 
     #just ToTensor before patch
-    channel3= transforms.Compose([  transforms.Normalize((0.5,), (0.5,)), transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
+    #channel3= transforms.Compose([  transforms.Normalize((0.5,), (0.5,)), transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
     channel3 = transforms.Lambda(lambda x: torch.cat([x, x, x], 0))
 
     transform_train= transforms.Compose([ transforms.Resize((resize,resize)), transforms.RandomHorizontalFlip(),
@@ -135,7 +136,11 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
         iter_count =   np.zeros(n_heads)
         ss_criterion = torch.nn.CrossEntropyLoss().to(device = device)
 
+    if self_supervised and self_coef < 1:
+        file_name= file_name.replace("self_supervised","self_supervised"+str(self_coef))
+
     saved_model_PATH = saved_model_PATH+  "saved_models/semi_supervised/"+ file_name[:-4]
+
     if not os.path.exists(saved_model_PATH): os.mkdir(saved_model_PATH)
     log_file = open(saved_model_PATH+"/log_file.txt","a")
     img_list = []
@@ -182,14 +187,14 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
             if index_list:
                 c_loss = classification_criterion(output[index_list,1:] ,class_labels[index_list,:])
-                errD_real = errD_real + c_loss
-
+                #errD_real = errD_sreal + c_loss
+                c_loss.backward(retain_graph=True)
             # Calculate gradients for D in backward pass
             errD_real.backward()
             D_x = sig(output[:,0].view(-1)).mean().item()
 
             #SELF SUPERVISION###########
-            if self_supervised:
+            if self_supervised and (i>9000 or epoch >0) :
                 h_id =i % n_heads
                 head_dict = head_arch[h_id]
                 iter_count[h_id] += 1
@@ -203,12 +208,11 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
                 patches, patch_labels =  ss_patcher()
                 patches = patches.to(device, dtype = torch.float32)
-
                 patch_labels = patch_labels.to(device, dtype = torch.long)
                 output_patch = netD(patches)
 
                 #print(i,"noo index_list",index_list)
-                errD_self = ss_criterion(output_patch,patch_labels)
+                errD_self = self_coef*ss_criterion(output_patch,patch_labels)
 
                 if iter_count[h_id] % 200 == 1 :
                     self_plot_loss[head_dict['head_name']].append(errD_self.item())
@@ -277,10 +281,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             # Update D
             optimizerD.step()
 
-            #SELF SUPERVISION###########
-            if self_supervised:
-                optimizer_D_extra.step()
-            #SELF SUPERVISION###########
+
 
             ############################
             # (2) Update G network: maximize log(D(G(z)))
@@ -306,11 +307,15 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             else:
                 errG.backward()
 
-
             D_G_z2 = sig(output[:,0].view(-1)).mean().item()
 
             # Update G
             optimizerG.step()
+
+            #SELF SUPERVISION###########
+            if self_supervised and (i>9000 or epoch >0):
+                optimizer_D_extra.step()
+            #SELF SUPERVISION###########
 
             #print("breaking");break
             # Output training stats
@@ -343,7 +348,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (i % 100 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
+            if (i % 2000 == 0) or((epoch == num_epochs-1) and (i == len(dataloader)-1)):
 
                 # Generate fake image batch with G
                 with torch.no_grad():
@@ -379,8 +384,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
 
                 img_list.append(grid)
 
-                if i==2500:
-                    break
+
 
 
     print('training done')
@@ -486,8 +490,8 @@ kwargs_self_all ={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Pos
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":2,"show":False, "resize":128,"batch_size":16,"num_epochs":1},
-            #{"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":256,"batch_size":16},
+            {"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16},
+            #{"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":64,"batch_size":16}
             #{"self_supervised":kwargs_self_all,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             #{"self_supervised":kwargs_self_all,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
             ]

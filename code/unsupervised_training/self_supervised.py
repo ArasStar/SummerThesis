@@ -66,12 +66,13 @@ def self_train(method="",num_epochs=3, learning_rate=0.0001, batch_size=16, resi
   #Setting permuation_set
   PATH_p_set = root_PATH +"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+ str(perm_set_size)+".pt"
   #just ToTensor before patch
-  transform_train= transforms.Compose([  transforms.Resize((resize,resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor(),transforms.Normalize((0.5,), (0.5,)),
-                                                                                                                transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
+  # transform_train= transforms.Compose([  transforms.Resize((resize,resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor(),transforms.Normalize((0.5,), (0.5,)),
+  #                                                                                                               transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
 
+  transform_train= transforms.Compose([  transforms.Resize((resize,resize)), transforms.RandomHorizontalFlip(), transforms.ToTensor(),
+                                                                                                              transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
   #after patch transformation
-
-  transform_after_patching= transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
+  #transform_after_patching= transforms.Compose([ transforms.Lambda(lambda x: torch.cat([x, x, x], 0))])
   transform_after_patching= None
 
   #constant vars
@@ -257,7 +258,7 @@ schedule = [
            #,{"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":100,"batch_size":4,"batch_factor":4,"patch_size":96}
            ]
 
-#schedule = [  {"method":"naive_combination","combo":combo_all,"num_epochs":2,"perm_set_size":1000,"batch_size":4,"batch_factor":4,"patch_size":96,"show":True}]
+#schedule = [  {"method":"Relative_Position_old","num_epochs":3,"batch_size":16,"split":3,"show":False}]
 
 
 

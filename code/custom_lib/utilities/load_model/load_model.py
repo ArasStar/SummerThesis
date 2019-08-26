@@ -115,7 +115,7 @@ class Load_Model(object):
 
             head_module = head_libs[h]
             method_head = head_module.Basic_Head(1024,self.out_D[h], gpu = self.use_cuda)
-            to_patch = getattr(head_module,h)
+            to_patch = getattr(head_module,"Relative_Position") if h== "Relative_Position_old" else getattr(head_module,h)
             kwarg =self.kwargs[h]
             heads.append({"head":method_head, "patch_func":to_patch, "args": kwarg, "optimizer": torch.optim.RMSprop(list(self.model.features.parameters())+list(method_head.parameters()), lr=self.kwargs['Common']["learning_rate"]) ,"head_name":h})
 

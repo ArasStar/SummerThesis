@@ -7,7 +7,7 @@ import matplotlib.patches as patches4rectangle
 
 
 class Relative_Position(object):
-    def __init__(self, image_batch, split,transform=None, show=False, labels_path="/home/aras/Desktop/"):
+    def __init__(self, image_batch, split,transform=None, show=False, labels_path= "/homes/ay1218/Desktop/"):
         self.bs, _, self.h, self.w = image_batch.shape
         self.split = split  # 3x3 or 2x2 grid
         self.i_row = round(self.h / self.split)
@@ -42,8 +42,8 @@ class Relative_Position(object):
                 patch2 = patch2.view(1, 3, h_patch, w_patch)
             else:
                 _, h_patch, w_patch = patch1.shape
-                patch1 = patch1.view(1, 1, h_patch, w_patch)
-                patch2 = patch2.view(1, 1, h_patch, w_patch)
+                patch1 = patch1.view(1, 3, h_patch, w_patch)
+                patch2 = patch2.view(1, 3, h_patch, w_patch)
             pair = torch.cat((patch1, patch2))
 
             patches = torch.cat((patches, pair))
@@ -69,7 +69,7 @@ class Relative_Position(object):
         i_col = int(self.i_col)
         max = self.split - 1
 
-        patch = torch.zeros(1, i_row + 1, i_col + 1)
+        patch = torch.zeros(3, i_row + 1, i_col + 1)
 
         row_s = i_row * drow
         col_s = i_col * dcol
@@ -115,7 +115,7 @@ class Relative_Position(object):
 
     def show_cropped_patches(self, image, patch1, patch2, direction, cord_list1, cord_list2):
         # cordlist->[(row_s,row_e),(col_s,col_e)]
-        gridimage_delete_later = image.clone()
+        gridimage_delete_later = image[0].clone()
         gridimage_delete_later = gridimage_delete_later.view(self.h, self.w)
 
         label_img = mpimg.imread(self.labels_path)

@@ -25,6 +25,7 @@ sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/plotting_li
 
 import chexpert_load
 import relative_position
+import relative_position_old
 import jigsaw
 import rotation
 
@@ -83,7 +84,6 @@ class Task_Validation(object):
 
                 patcher = head["patch_func"](image_batch= images,**head["args"])
                 patches, labels =  patcher()
-
                 patches = patches.to(device = self.device, dtype = torch.float32)
                 labels = labels.to(device=self.device, dtype=torch.long)
 
@@ -147,6 +147,14 @@ class Task_Validation(object):
             patch_size = int(from_checkpoint[start_i+10: start_i+12])
             self.kwargs["Relative_Position"]["patch_size"] = patch_size
             self.kwargs["Relative_Position"]["transform"] = self.transform_after_patching
+
+        if from_checkpoint.__contains__("split"):
+            #split
+            start_i = from_checkpoint.index('split')
+            split = int(from_checkpoint[start_i+5: start_i+6])
+            self.kwargs["Relative_Position"]["split"] = split
+            self.kwargs["Relative_Position"]["transform"] = self.transform_after_patching
+
 
         if from_checkpoint.__contains__("Rotation"):
             #split
