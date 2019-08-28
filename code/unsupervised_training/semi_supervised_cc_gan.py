@@ -170,6 +170,17 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             ############################
             # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)) + log()
             ###########################
+
+            ####SELF-SUPERVISED############################################
+            if self_supervised and (i>-1 or epoch >0) :
+                h_id =i % n_heads
+                head_dict = head_arch[h_id]
+                iter_count[h_id] += 1
+
+                optimizer_D_extra= head_dict['optimizer']
+                optimizer_D_extra.zero_grad()
+            ###############################################################
+
             ## Train with all-real batch
             netD.zero_grad()
             # Format batch
@@ -192,37 +203,6 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             # Calculate gradients for D in backward pass
             errD_real.backward()
             D_x = sig(output[:,0].view(-1)).mean().item()
-
-            #SELF SUPERVISION###########
-            if self_supervised and (i>9000 or epoch >0) :
-                h_id =i % n_heads
-                head_dict = head_arch[h_id]
-                iter_count[h_id] += 1
-
-                netD.discriminator.classifier = head_dict["head"]
-
-                ss_patcher = head_dict["patch_func"](image_batch= temp_real_images,**head_dict["args"])
-
-                optimizer_D_extra= head_dict['optimizer']
-                optimizer_D_extra.zero_grad()
-
-                patches, patch_labels =  ss_patcher()
-                patches = patches.to(device, dtype = torch.float32)
-                patch_labels = patch_labels.to(device, dtype = torch.long)
-                output_patch = netD(patches)
-
-                #print(i,"noo index_list",index_list)
-                errD_self = self_coef*ss_criterion(output_patch,patch_labels)
-
-                if iter_count[h_id] % 200 == 1 :
-                    self_plot_loss[head_dict['head_name']].append(errD_self.item())
-
-                errD_self.backward()
-
-                netD.discriminator.classifier=cc_GAN_head
-
-
-            #SELF SUPERVISION###########
 
 
             ## Train with all-fake batch
@@ -281,6 +261,32 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             # Update D
             optimizerD.step()
 
+            #SELF SUPERVISION###########
+            if self_supervised and (i>-1 or epoch >0) :
+
+                netD.discriminator.classifier = head_dict["head"]
+
+                ss_patcher = head_dict["patch_func"](image_batch= temp_real_images,**head_dict["args"])
+                patches, patch_labels =  ss_patcher()
+                patches = patches.to(device, dtype = torch.float32)
+                patch_labels = patch_labels.to(device, dtype = torch.long)
+
+                output_patch = netD(patches)
+
+                #print(i,"noo index_list",index_list)
+                errD_self = self_coef*ss_criterion(output_patch,patch_labels)
+
+                if iter_count[h_id] % 200 == 1 :
+                    self_plot_loss[head_dict['head_name']].append(errD_self.item())
+
+                errD_self.backward()
+
+                netD.discriminator.classifier=cc_GAN_head
+
+                optimizer_D_extra.step()
+
+            #SELF SUPERVISION###########
+
 
 
             ############################
@@ -312,10 +318,7 @@ def train_ccgan(method="CC_GAN",self_supervised=False,resize = 320, num_epochs=3
             # Update G
             optimizerG.step()
 
-            #SELF SUPERVISION###########
-            if self_supervised and (i>9000 or epoch >0):
-                optimizer_D_extra.step()
-            #SELF SUPERVISION###########
+
 
             #print("breaking");break
             # Output training stats
@@ -486,11 +489,12 @@ kwargs_self_J_R ={"Jigsaw": kwarg_Jigsaw,"Rotation":kwarg_Rotation}
 kwargs_self_R_RP ={"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation}
 
 kwargs_self_all ={"Jigsaw": kwarg_Jigsaw,"Relative_Position": kwarg_Relative_Position,"Rotation":kwarg_Rotation}
-
+kwargs_self_combo= {"Rotation":kwarg_Rotation}
 p = saved_model_PATH +'saved_models/semi_supervised/'
 
 schedule=[
-            {"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16},
+            {"self_supervised":kwargs_self_combo,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16,"self_coef":0.1},
+            {"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":128,"batch_size":16,"self_coef":0.1}
             #{"self_supervised":kwargs_self_all,"method":"CC_GAN","num_epochs":3,"show":False, "resize":64,"batch_size":16}
             #{"self_supervised":kwargs_self_all,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":256,"batch_size":16},
             #{"self_supervised":kwargs_self_all,"method":"CC_GAN2","num_epochs":3,"show":False, "resize":128,"batch_size":16}
