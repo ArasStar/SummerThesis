@@ -7,6 +7,7 @@ import jigsaw
 import rotation
 import relative_position_old
 
+
 head_libs={"Relative_Position":relative_position ,"Jigsaw":jigsaw,"Rotation":rotation,"Relative_Position_old":relative_position_old}
 
 
@@ -26,7 +27,7 @@ class Load_Model(object):
         self.head = None
         self.optimizer = optimizer
         self.optimizer_chex = None
-        self.out_D = "" if method=="TL" else {"Relative_Position":8,"Relative_Position_old":8 ,"Rotation":4,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"]}
+        self.out_D = "" if method=="TL" else {"Relative_Position":8,"Relative_Position_old":8 ,"Rotation":4,"Jigsaw":self.kwargs["Jigsaw"]["perm_set_size"] if "Jigsaw" in self.kwargs.keys() else 0}
         self.use_cuda = use_cuda
         self.plot_loss = plot_loss
 

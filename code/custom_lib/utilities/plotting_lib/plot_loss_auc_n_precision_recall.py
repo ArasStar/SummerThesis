@@ -29,6 +29,11 @@ class Curves_AUC_PrecionnRecall(object):
 
           self.acts = probs_n_act_df.groupby(['patient','study'])[[cl+"acts" for cl in self.list_classes]].max().values
           self.probs = probs_n_act_df.groupby(['patient','study'])[[cl+"probs" for cl in self.list_classes]].mean().values
+          print(type(self.acts))
+          print(len(self.acts))
+          print(type(self.probs))
+          print(len(self.probs))
+
 
 
 

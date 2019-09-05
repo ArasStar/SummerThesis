@@ -22,7 +22,9 @@ sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/
 
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/selfsupervised_heads/jigsaw')
 sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/utilities/plotting_lib')
+sys.path.insert(0, root_PATH+'SummerThesis/code/custom_lib/semi_supervised_CC_GAN')
 
+import modified_densenet
 import chexpert_load
 import relative_position
 import relative_position_old
@@ -45,7 +47,7 @@ class Task_Validation(object):
         self.device = torch.device('cuda') if gpu else torch.device('cpu')
         self.head_combo=[]
         self.kwargs= {"Relative_Position": {} ,"Jigsaw":{},"Rotation":{}}
-        self.model = models.densenet121().to(self.device)
+        self.model = models.densenet121().to(self.device) if not full_file_path.__contains__("CC_GAN") else modified_densenet.densenet121().to(self.device)
         self.out_D = {"Relative_Position":8 ,"Rotation":4,"Jigsaw":None}
         self.transform_after_patching =transform
         self.heads = None
@@ -114,9 +116,12 @@ class Task_Validation(object):
     def load_from_checkpoint(self):
 
         file_name = self.file_name
-
+        print(file_name)
         if self.file_name.__contains__("*"):
-          self.head_combo = file_name[file_name.index("*")+1: file_name.index("*_num_epochs")].split("*")
+            if self.file_name.__contains__("CC_GAN"):
+                self.head_combo = file_name[file_name.index("*")+1: file_name.index("*num_epochs")].split("*")
+            else:
+                self.head_combo = file_name[file_name.index("*")+1: file_name.index("*_num_epochs")].split("*")
 
         else:
           head_name = file_name[0:file_name.index('_num_epochs')]
@@ -124,17 +129,35 @@ class Task_Validation(object):
 
         #loading model
         checkpoint = torch.load(self.file_path, map_location = self.device)
-        self.model.load_state_dict(checkpoint['model_state_dict'], strict=False)#loading features for model
+        print(checkpoint.keys())
+
+        if self.file_name.__contains__("CC_GAN"):
+            print("hooop")
+            self.model.load_state_dict(checkpoint['D_model_state_dict'], strict=False)#loading features for model
+        else:
+            self.model.load_state_dict(checkpoint['model_state_dict'], strict=False)#loading features for model
 
         self.update_params_from_checkpoint()
         self.set_head()
 
-        head_dict = checkpoint["model_head"] # dict headname: headstateDict
+        if self.file_name.__contains__("CC_GAN"):
+            head_dict = checkpoint["ss_model_head"] # dict headname: headstateDict
+            if not isinstance(head_dict,dict):
+                head_dict = head_dict[0]
+
+        else:
+            head_dict = checkpoint["model_head"] # dict headname: headstateDict
+
 
         for head in self.heads:
 
             h_name = head["head_name"]
-            head["head"].load_state_dict(head_dict[h_name])
+            head["head"].load_state_dict(head_dict[h_name],strict=True)
+
+            # print(h_name)
+            #print(type(head_dict))
+            # print(len(head_dict))
+            #print(head_dict[0].keys())
 
 
     def update_params_from_checkpoint(self):
@@ -145,6 +168,7 @@ class Task_Validation(object):
             #split
             start_i = from_checkpoint.index('patch_size')
             patch_size = int(from_checkpoint[start_i+10: start_i+12])
+            print("patch_size",patch_size)
             self.kwargs["Relative_Position"]["patch_size"] = patch_size
             self.kwargs["Relative_Position"]["transform"] = self.transform_after_patching
 
@@ -160,6 +184,7 @@ class Task_Validation(object):
             #split
             start_i = from_checkpoint.index('K')
             K = int(from_checkpoint[start_i+1: start_i+2])
+            print("K",K)
             self.kwargs["Rotation"]["K"] = K
             self.kwargs["Rotation"]["transform"] = self.transform_after_patching
 
@@ -168,18 +193,24 @@ class Task_Validation(object):
             start_i = from_checkpoint.index('perm_set_size')
             end_i = from_checkpoint.index('_grid_crop_size')
             perm_set_size = int(from_checkpoint[start_i+13: end_i])
+            print("perm_set_size",perm_set_size)
+
             #grid crop size
             start_i=end_i
             end_i = from_checkpoint.index('_patch_crop_size')
             grid_crop_size = int(from_checkpoint[start_i+15: end_i])
+            print("grid_crop_size",grid_crop_size)
+
             #patch crop size
             start_i=end_i
             patch_crop_size = int(from_checkpoint[start_i+16: start_i+18])
+            print("patch_crop_size",patch_crop_size)
 
             self.kwargs["Jigsaw"]["perm_set_size"] = perm_set_size
             self.kwargs["Jigsaw"]["grid_crop_size"] = grid_crop_size
             self.kwargs["Jigsaw"]["patch_crop_size"] = patch_crop_size
 
+            self.kwargs["Jigsaw"]["path_permutation_set"] = self.root_PATH+"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+str(perm_set_size)+".pt"
             self.kwargs["Jigsaw"]["path_permutation_set"] = self.root_PATH+"SummerThesis/code/custom_lib/utilities/permutation_set/saved_permutation_sets/permutation_set"+str(perm_set_size)+".pt"
 
             self.out_D["Jigsaw"] = perm_set_size

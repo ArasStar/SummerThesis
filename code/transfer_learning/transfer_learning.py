@@ -181,12 +181,11 @@ semi =  saved_model_PATH +'saved_models/no_normalize_semi_supervised/'
 #schedule=[  { "from_checkpoint":c+"from_scratch_epoch3_batch16_learning_rate0.0001/from_scratch_epoch3_batch16_learning_rate0.0001.tar"}    ]
 
 #GANS
-schedule=[
-        {"pre_trained_PATH":semi+"CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize128_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize128_label_rate0.2.tar"}
-        ,{"pre_trained_PATH": semi+"CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize256_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size16_resize256_label_rate0.2.tar"}
-        ,{"pre_trained_PATH": semi+"CC_GAN2_num_epochs3_learning_rate0.0002_batch_size32_resize128_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size32_resize128_label_rate0.2.tar"}
-        ,{"pre_trained_PATH": semi+"CC_GAN2_num_epochs3_learning_rate0.0002_batch_size64_resize128_label_rate0.2/CC_GAN2_num_epochs3_learning_rate0.0002_batch_size64_resize128_label_rate0.2.tar"}
-        ]
+# schedule=[
+#         {"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/semi_supervised/protect_self_supervised0.1_CC_GAN2*Jigsaw*Relative_Position*Rotation*num_epochs3learning_rate0.0002batch_size16resize128label_rate0.2_perm_set_size1000_grid_crop_size225_patch_crop_size64__patch_size96__K4_resize128/self_supervised0.1_CC_GAN2*Jigsaw*Relative_Position*Rotation*num_epochs3learning_rate0.0002batch_size16resize128label_rate0.2_perm_set_size1000_grid_crop_size225_patch_crop_size64__patch_size96__K4_resize128.tar"}
+#         ,{"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/semi_supervised/protect_self_supervised0.1_CC_GAN2*Rotation*num_epochs3learning_rate0.0002batch_size16resize128label_rate0.2_K4_resize128/self_supervised0.1_CC_GAN2*Rotation*num_epochs3learning_rate0.0002batch_size16resize128label_rate0.2_K4_resize128.tar"}
+#         ,{"pre_trained_PATH":"/vol/bitbucket/ay1218/saved_models/semi_supervised/protect_self_supervised0.1_CC_GAN*Jigsaw*Relative_Position*Rotation*num_epochs3learning_rate0.0002batch_size16resize128label_rate0.2_perm_set_size1000_grid_crop_size225_patch_crop_size64__patch_size96__K4_resize128/self_supervised0.1_CC_GAN*Jigsaw*Relative_Position*Rotation*num_epochs3learning_rate0.0002batch_size16resize128label_rate0.2_perm_set_size1000_grid_crop_size225_patch_crop_size64__patch_size96__K4_resize128.tar"}
+#         ]
 
 
 # schedule=[
